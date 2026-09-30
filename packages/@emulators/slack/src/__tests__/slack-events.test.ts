@@ -934,6 +934,24 @@ describe("Slack plugin - event dispatch baseline", () => {
     expect(capture.requests).toHaveLength(0);
   });
 
+  it("skips app_mention when the mentioned bot is not a channel member", async () => {
+    const { app, store, webhooks } = createSlackTestApp();
+    const capture = captureFetchRequests();
+    registerSlackEventSubscription(webhooks, ["app_mention"]);
+    const ss = getSlackStore(store);
+    const general = ss.channels.findOneBy("name", "general")!;
+    insertBotUser(ss, "UBOTOUTSIDE", "BBOTOUTSIDE");
+    ss.channels.update(general.id, { members: general.members, num_members: general.num_members });
+
+    const res = await app.request(`${base}/api/chat.postMessage`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ channel: general.channel_id, text: "anyone? <@UBOTOUTSIDE>" }),
+    });
+    expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
+    expect(capture.requests).toHaveLength(0);
+  });
+
   it("dispatches app_mention for incoming webhook messages that mention another bot", async () => {
     const { app, store, webhooks } = createSlackTestApp();
     const capture = captureFetchRequests();
@@ -1336,7 +1354,7 @@ describe("Slack plugin - event dispatch baseline", () => {
   });
 });
 
-function insertBotUser(ss: ReturnType<typeof getSlackStore>, userId: string, botId: string) {
+function insertBotUser(ss: ReturnType<typeof getSlackStore>, userId: string, botId: string, joinChannel = "general") {
   const human = ss.users.all()[0]!;
   ss.users.insert({
     ...human,
@@ -1353,6 +1371,8 @@ function insertBotUser(ss: ReturnType<typeof getSlackStore>, userId: string, bot
     deleted: false,
     icons: { image_48: "" },
   });
+  const channel = ss.channels.findOneBy("name", joinChannel)!;
+  ss.channels.update(channel.id, { members: [...channel.members, userId], num_members: channel.num_members + 1 });
 }
 
 function insertHumanUser(ss: ReturnType<typeof getSlackStore>, userId: string): string {

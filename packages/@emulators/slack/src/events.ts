@@ -45,7 +45,7 @@ export async function dispatchSlackAppMention(
     ? getSlackStore(store).bots.findOneBy("bot_id", message.bot_id)?.user_id
     : undefined;
   const mentionsOtherBot = findMentionedSlackBotUserIds(store, message.text).some(
-    (userId) => userId !== message.user && userId !== authorBotUserId,
+    (userId) => userId !== message.user && userId !== authorBotUserId && channel.members.includes(userId),
   );
   if (!mentionsOtherBot) return;
 
