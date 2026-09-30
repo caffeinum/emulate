@@ -3,6 +3,7 @@ import { getSlackStore } from "../store.js";
 import { buildSlackEventEnvelope, dispatchSlackAppMention } from "../events.js";
 import {
   formatSlackMessage,
+  slackMessageChannelType,
   generateTs,
   hasSlackMessageContent,
   normalizeSlackMessageText,
@@ -106,6 +107,7 @@ export function webhookRoutes(ctx: RouteContext): void {
         type: "message",
         subtype: "bot_message",
         channel: targetChannel.channel_id,
+        channel_type: slackMessageChannelType(targetChannel),
         bot_id: botId,
       }),
       "slack",

@@ -198,9 +198,14 @@ slack:
       label: CI Notifications
   strict_scopes: false
   signing_secret: my_signing_secret
+  event_subscriptions:
+    - url: http://localhost:3000/slack/events
+      events: [message, app_mention]
 ```
 
 When no OAuth apps are configured, the emulator accepts any `client_id`. With apps configured, strict validation is enforced for `client_id`, `client_secret`, and `redirect_uri`.
+
+`event_subscriptions` registers Events API request URLs. The emulator POSTs each `event_callback` envelope to every matching `url`; omit `events` to receive all event types.
 
 `signing_secret` signs every outbound event subscription callback. Configure the receiving app with the same secret; signed callbacks include `X-Slack-Request-Timestamp` and `X-Slack-Signature`, with `X-Slack-Signature` set to `v0=<HMAC-SHA256(secret, "v0:<timestamp>:<raw-body>")>`. Verify against the unparsed request body. When the secret is absent or empty, callbacks are unsigned.
 
@@ -674,7 +679,7 @@ For supported Slack writes that emit events, the emulator dispatches `event_call
 
 Each callback includes outer `team_id`, `event_id`, and integer Unix-seconds `event_time` alongside the inner `event`. For authenticated Web API writes, `team_id` comes from the presented Slack token's installation. Development tokens without a stored Slack record fall back to the affected channel, user, or file's team, then the seeded workspace team (or `T000000001`). Incoming webhook posts use their webhook record's team, or the target channel's team when no record matches. Each logical event gets a distinct `event_id` shared by deliveries to multiple subscribers.
 
-- `message` events on `chat.postMessage`
+- `message` events on `chat.postMessage`, with `channel_type` (`channel`, `group`, `im`, or `mpim`) on every `message` event
 - `message` with `subtype: message_changed` on `chat.update`
 - `message` with `subtype: message_deleted` on `chat.delete`
 - rich message fields are included on posted `message` events when present

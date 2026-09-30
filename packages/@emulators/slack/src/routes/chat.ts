@@ -4,6 +4,7 @@ import { buildSlackEventEnvelope, dispatchSlackAppMention, resolveSlackEventTeam
 import { getSlackStore } from "../store.js";
 import {
   formatSlackMessage,
+  slackMessageChannelType,
   formatSlackPermalink,
   formatSlackScheduledMessage,
   formatSlackScheduledMessageListItem,
@@ -181,6 +182,7 @@ export function chatRoutes(ctx: RouteContext): void {
         ...formatSlackMessage(msg),
         type: "message",
         channel: ch.channel_id,
+        channel_type: slackMessageChannelType(ch),
       }),
       "slack",
     );
@@ -301,6 +303,7 @@ export function chatRoutes(ctx: RouteContext): void {
         subtype: "message_changed",
         hidden: true,
         channel,
+        ...(ch ? { channel_type: slackMessageChannelType(ch) } : {}),
         ts: eventTs,
         event_ts: eventTs,
         message: formatSlackMessage(updated),
@@ -352,6 +355,7 @@ export function chatRoutes(ctx: RouteContext): void {
         subtype: "message_deleted",
         hidden: true,
         channel,
+        ...(ch ? { channel_type: slackMessageChannelType(ch) } : {}),
         ts: eventTs,
         event_ts: eventTs,
         deleted_ts: ts,
