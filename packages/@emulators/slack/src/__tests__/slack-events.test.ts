@@ -799,6 +799,59 @@ describe("Slack plugin - event dispatch baseline", () => {
     expect((capture.jsonBodies()[0] as any).event.user).toBeUndefined();
   });
 
+
+  it("registers event subscriptions from slack.event_subscriptions seed config", async () => {
+    const { app, store, webhooks } = createSlackTestApp();
+    const capture = captureFetchRequests();
+    seedFromConfig(
+      store,
+      base,
+      {
+        signing_secret: "seeded-secret",
+        event_subscriptions: [
+          { url: "https://bot.example/slack/events", events: ["message"] },
+          { url: "https://all.example/events" },
+        ],
+      },
+      webhooks,
+    );
+    const channel = getSlackStore(store).channels.findOneBy("name", "general")!.channel_id;
+
+    await app.request(`${base}/api/reactions.add`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ channel, timestamp: "1.000001", name: "eyes" }),
+    });
+    await app.request(`${base}/api/chat.postMessage`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ channel, text: "seeded subscription" }),
+    });
+
+    const urls = capture.requests.map((request) => request.url);
+    expect(urls.filter((url) => url === "https://bot.example/slack/events")).toHaveLength(1);
+    expect(urls.filter((url) => url === "https://all.example/events").length).toBeGreaterThanOrEqual(1);
+    const delivery = capture.requests.find((request) => request.url === "https://bot.example/slack/events")!;
+    const headers = delivery.init.headers as Record<string, string>;
+    const expected = createHmac("sha256", "seeded-secret")
+      .update(`v0:${headers["X-Slack-Request-Timestamp"]}:${delivery.init.body}`)
+      .digest("hex");
+    expect(headers["X-Slack-Signature"]).toBe(`v0=${expected}`);
+    expect(JSON.parse(delivery.init.body as string).event).toMatchObject({
+      type: "message",
+      text: "seeded subscription",
+      channel_type: "channel",
+    });
+  });
+
+  it("rejects slack.event_subscriptions entries without a url", () => {
+    const { store, webhooks } = createSlackTestApp();
+    expect(() => seedFromConfig(store, base, { event_subscriptions: [{} as { url: string }] }, webhooks)).toThrow(
+      "slack.event_subscriptions entries require a url",
+    );
+  });
+
+
   it("dispatches archive and unarchive lifecycle events", async () => {
     const { app, webhooks } = createSlackTestApp();
     const capture = captureFetchRequests();
