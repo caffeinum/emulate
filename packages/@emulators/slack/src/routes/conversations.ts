@@ -4,6 +4,7 @@ import { buildSlackEventEnvelope, resolveSlackEventTeamId } from "../events.js";
 import { getSlackStore } from "../store.js";
 import {
   formatSlackMessage,
+  slackMessageChannelType,
   generateSlackId,
   generateTs,
   getSlackConversationOpenState,
@@ -107,6 +108,7 @@ export function conversationsRoutes(ctx: RouteContext): void {
       buildSlackEventEnvelope(resolveSlackEventTeamId(c, store, channel.team_id), {
         ...formatSlackMessage(msg),
         channel: channel.channel_id,
+        channel_type: slackMessageChannelType(channel),
         event_ts: msg.ts,
       }),
       "slack",

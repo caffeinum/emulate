@@ -13,6 +13,7 @@ import { getSlackStore } from "../store.js";
 import {
   formatSlackFile,
   formatSlackMessage,
+  slackMessageChannelType,
   generateSlackId,
   generateTs,
   normalizeSlackMessageText,
@@ -304,6 +305,7 @@ export function filesRoutes(ctx: RouteContext): void {
             type: "message",
             subtype: "file_share",
             channel: channel.channel_id,
+            channel_type: slackMessageChannelType(channel),
           }),
           "slack",
         );
