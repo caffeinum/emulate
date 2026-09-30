@@ -186,6 +186,13 @@ export async function parseSlackBody(c: Context): Promise<Record<string, unknown
   return result;
 }
 
+export function slackMessageChannelType(ch: SlackChannel): "channel" | "group" | "im" | "mpim" {
+  if (ch.is_im) return "im";
+  if (ch.is_mpim) return "mpim";
+  if (ch.is_private) return "group";
+  return "channel";
+}
+
 export function formatSlackMessage(msg: SlackMessage) {
   return {
     type: msg.type,

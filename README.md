@@ -705,6 +705,8 @@ Inspect secret-free metadata for minted installation tokens at `GET /_emulate/in
 ```yaml
 slack:
   signing_secret: "my_signing_secret"
+  event_subscriptions:
+    - url: "http://localhost:3000/slack/events"
   oauth_apps:
     - client_id: "12345.67890"
       client_secret: "example_client_secret"
@@ -987,7 +989,7 @@ Google ID tokens are RS256-signed JWTs. The discovery document advertises RS256,
 
 Fully stateful Slack Web API emulation with channels, messages, threads, reactions, user profiles, presence, modern file uploads, pins, bookmarks, views, OAuth v2, and incoming webhooks. Chat writes preserve common rich message fields such as `blocks`, `attachments`, `metadata`, formatting flags, unfurl flags, and client message ids. Conversation writes update archive state, names, topics, purposes, membership, DMs, MPIMs, and read cursors. User writes update profile fields, status, custom fields, and deterministic active or away presence. File writes support the current external upload flow with local upload URLs, file share messages, reads, lists, downloads, and deletes. Pin and bookmark writes support channel message pins and link bookmarks. View writes support App Home publishing and modal stacks. Seeded OAuth apps and OAuth installs create bot users and installation records. OAuth exchanges and explicit token seeds create scoped token records. Supported write state changes dispatch Slack `event_callback` payloads to configured webhook URLs. Messages that mention a bot user in a channel also dispatch `app_mention`.
 
-Set `slack.signing_secret` in seed config to sign every outbound event subscription callback. The emulator sends `X-Slack-Request-Timestamp` and `X-Slack-Signature`, where the signature is `v0=<HMAC-SHA256(secret, "v0:<timestamp>:<raw-body>")>`. Configure the receiver with the same secret and verify the unparsed request body. Without a secret, callbacks are unsigned.
+Register Events API request URLs with `slack.event_subscriptions` (`url`, optional `events` filter). Set `slack.signing_secret` in seed config to sign every outbound event subscription callback. The emulator sends `X-Slack-Request-Timestamp` and `X-Slack-Signature`, where the signature is `v0=<HMAC-SHA256(secret, "v0:<timestamp>:<raw-body>")>`. Configure the receiver with the same secret and verify the unparsed request body. Without a secret, callbacks are unsigned.
 
 Slack message text is limited to 40,000 Unicode characters across chat writes, incoming webhooks, and file upload initial comments. Longer text is truncated at a Unicode code point boundary before it is stored or dispatched. Successful Web API responses include `warning: "message_truncated"` and `response_metadata` with the matching warning and explanatory message. Rich fields such as `blocks` and `attachments` are preserved unchanged.
 
