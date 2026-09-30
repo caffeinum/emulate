@@ -790,6 +790,104 @@ describe("Slack plugin - event dispatch baseline", () => {
     expect((capture.jsonBodies()[0] as any).event.user).toBeUndefined();
   });
 
+  it("dispatches app_mention when a message mentions a bot user", async () => {
+    const { app, store, webhooks } = createSlackTestApp();
+    const capture = captureFetchRequests();
+    registerSlackEventSubscription(webhooks, ["message", "app_mention"]);
+    const ss = getSlackStore(store);
+    insertBotUser(ss, "UBOTMENTION", "BBOTMENTION");
+    const channel = ss.channels.findOneBy("name", "general")!;
+
+    const parentRes = await app.request(`${base}/api/chat.postMessage`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ channel: channel.channel_id, text: "thread root" }),
+    });
+    const parent = (await parentRes.json()) as { ts: string };
+
+    const res = await app.request(`${base}/api/chat.postMessage`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        channel: channel.channel_id,
+        text: "hey <@UBOTMENTION> and <@UBOTMENTION|mentionbot> ping",
+        thread_ts: parent.ts,
+      }),
+    });
+    const posted = (await res.json()) as { ok: boolean; ts: string };
+    expect(posted.ok).toBe(true);
+
+    const events = capture.jsonBodies().map((body) => (body as { event: Record<string, unknown> }).event);
+    expect(events.map((event) => event.type)).toEqual(["message", "message", "app_mention"]);
+    expect(events[2]).toEqual({
+      type: "app_mention",
+      user: "U000000001",
+      text: "hey <@UBOTMENTION> and <@UBOTMENTION|mentionbot> ping",
+      ts: posted.ts,
+      thread_ts: parent.ts,
+      channel: channel.channel_id,
+      team: channel.team_id,
+      event_ts: posted.ts,
+    });
+  });
+
+  it("skips app_mention for human mentions, direct messages and self mentions", async () => {
+    const { app, store, webhooks, tokenMap } = createSlackTestApp();
+    const capture = captureFetchRequests();
+    registerSlackEventSubscription(webhooks, ["app_mention"]);
+    const ss = getSlackStore(store);
+    insertBotUser(ss, "UBOTSELF", "BBOTSELF");
+    const general = ss.channels.findOneBy("name", "general")!.channel_id;
+    const humanId = ss.users.all().find((user) => !user.is_bot && user.user_id !== "U000000001")?.user_id;
+
+    const post = async (headers: Record<string, string>, channel: string, text: string) => {
+      const res = await app.request(`${base}/api/chat.postMessage`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ channel, text }),
+      });
+      expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
+    };
+
+    if (humanId) await post(authHeaders(), general, `hi <@${humanId}>`);
+    await post(authHeaders(), "UBOTSELF", "dm <@UBOTSELF>");
+
+    tokenMap.set("xoxb-bot-self", { login: "UBOTSELF", id: 99, scopes: ["chat:write"] });
+    await post(
+      { Authorization: "Bearer xoxb-bot-self", "Content-Type": "application/json" },
+      general,
+      "me <@UBOTSELF>",
+    );
+
+    expect(capture.requests).toHaveLength(0);
+  });
+
+  it("dispatches app_mention for incoming webhook messages that mention another bot", async () => {
+    const { app, store, webhooks } = createSlackTestApp();
+    const capture = captureFetchRequests();
+    registerSlackEventSubscription(webhooks, ["app_mention"]);
+    const ss = getSlackStore(store);
+    insertBotUser(ss, "UBOTTARGET", "BBOTTARGET");
+    const webhook = ss.incomingWebhooks.all()[0]!;
+
+    const res = await app.request(`${base}${webhook.url}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "deploy done <@UBOTTARGET>" }),
+    });
+    expect(res.status).toBe(200);
+
+    expect(capture.requests).toHaveLength(1);
+    expect(capture.jsonBodies()[0]).toMatchObject({
+      event: {
+        type: "app_mention",
+        subtype: "bot_message",
+        bot_id: webhook.bot_id,
+        text: "deploy done <@UBOTTARGET>",
+      },
+    });
+  });
+
   it("dispatches archive and unarchive lifecycle events", async () => {
     const { app, webhooks } = createSlackTestApp();
     const capture = captureFetchRequests();
@@ -1165,3 +1263,22 @@ describe("Slack plugin - event dispatch baseline", () => {
     ]);
   });
 });
+
+function insertBotUser(ss: ReturnType<typeof getSlackStore>, userId: string, botId: string) {
+  const human = ss.users.all()[0]!;
+  ss.users.insert({
+    ...human,
+    id: undefined as never,
+    user_id: userId,
+    name: userId.toLowerCase(),
+    is_bot: true,
+    is_admin: false,
+  });
+  ss.bots.insert({
+    bot_id: botId,
+    user_id: userId,
+    name: userId.toLowerCase(),
+    deleted: false,
+    icons: { image_48: "" },
+  });
+}
