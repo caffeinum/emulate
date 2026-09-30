@@ -1,5 +1,5 @@
 import type { Context, RouteContext } from "@emulators/core";
-import { buildSlackEventEnvelope, resolveSlackEventTeamId } from "../events.js";
+import { buildSlackEventEnvelope, dispatchSlackAppMention, resolveSlackEventTeamId } from "../events.js";
 import type {
   SlackChannel,
   SlackFile,
@@ -306,6 +306,13 @@ export function filesRoutes(ctx: RouteContext): void {
             channel: channel.channel_id,
           }),
           "slack",
+        );
+        await dispatchSlackAppMention(
+          webhooks,
+          store,
+          resolveSlackEventTeamId(c, store, channel.team_id),
+          channel,
+          formatSlackMessage(updatedMessage),
         );
 
         for (const shared of messageFiles) {
