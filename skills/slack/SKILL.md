@@ -691,6 +691,7 @@ Each callback includes outer `team_id`, `event_id`, and integer Unix-seconds `ev
 - `presence_change` on presence writes
 - `file_created`, `file_shared`, and `file_deleted` on file writes
 - `message` with `subtype: file_share` on shared file uploads
+- `app_mention` alongside the `message` event when a channel message from `chat.postMessage`, a file share, or an incoming webhook mentions a bot user (`<@UBOT>`); not sent for DMs or when a bot mentions itself
 
 When `slack.signing_secret` is configured, every existing outbound event subscription callback includes `X-Slack-Request-Timestamp` and `X-Slack-Signature`. The signature is `v0=<HMAC-SHA256(secret, "v0:<timestamp>:<raw-body>")>`, using the exact serialized callback body. Configure the receiver with the same secret and verify the unparsed request body. With an absent or empty secret, callbacks are unsigned.
 

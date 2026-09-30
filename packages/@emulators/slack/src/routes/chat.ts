@@ -1,6 +1,6 @@
 import type { Context, RouteContext } from "@emulators/core";
 import type { SlackChannel, SlackMessage, SlackUser } from "../entities.js";
-import { buildSlackEventEnvelope, resolveSlackEventTeamId } from "../events.js";
+import { buildSlackEventEnvelope, dispatchSlackAppMention, resolveSlackEventTeamId } from "../events.js";
 import { getSlackStore } from "../store.js";
 import {
   formatSlackMessage,
@@ -183,6 +183,13 @@ export function chatRoutes(ctx: RouteContext): void {
         channel: ch.channel_id,
       }),
       "slack",
+    );
+    await dispatchSlackAppMention(
+      webhooks,
+      store,
+      resolveSlackEventTeamId(c, store, ch.team_id),
+      ch,
+      formatSlackMessage(msg),
     );
 
     return slackOk(c, {
