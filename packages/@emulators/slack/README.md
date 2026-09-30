@@ -160,6 +160,8 @@ A modal receiver must acknowledge within three seconds. An empty HTTP 200 closes
 ### Inspector
 - `GET /` — tabbed local inspector for conversations, messages, files, views, auth records, incoming webhooks, event subscriptions, and event deliveries
 
+Register event subscription URLs with `event_subscriptions: [{ url, events? }]` in the Slack seed config.
+
 When a supported write emits an `event_callback`, the payload includes the inner `event` and outer `token`, `api_app_id`, `authorizations`, `team_id`, `event_id`, and integer Unix-seconds `event_time`. The team comes from the presented Slack token's installation; development tokens without a stored Slack record fall back to the affected channel, user, or file's team, then the seeded workspace team (or `T000000001`). Incoming webhook posts use their webhook record's team, or the target channel's team when no record matches. Each logical event has a distinct `event_id` shared by deliveries to multiple subscribers.
 
 Each workspace installation receives an envelope attributed to its `api_app_id` and bot authorization. Event subscriptions are shared across apps; receivers can route by `api_app_id`. Without an installation, callbacks use `A000000001` and a local user authorization. The legacy `token` defaults to `emulate-verification-token`; override it with `slack.verification_token`. Use `slack.signing_secret` for signature verification.
