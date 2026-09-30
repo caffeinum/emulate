@@ -198,9 +198,14 @@ slack:
       label: CI Notifications
   strict_scopes: false
   signing_secret: my_signing_secret
+  event_subscriptions:
+    - url: http://localhost:3000/slack/events
+      events: [message, app_mention]
 ```
 
 When no OAuth apps are configured, the emulator accepts any `client_id`. With apps configured, strict validation is enforced for `client_id`, `client_secret`, and `redirect_uri`.
+
+`event_subscriptions` registers Events API request URLs. The emulator POSTs each `event_callback` envelope to every matching `url`; omit `events` to receive all event types.
 
 `signing_secret` signs every outbound event subscription callback. Configure the receiving app with the same secret; signed callbacks include `X-Slack-Request-Timestamp` and `X-Slack-Signature`, with `X-Slack-Signature` set to `v0=<HMAC-SHA256(secret, "v0:<timestamp>:<raw-body>")>`. Verify against the unparsed request body. When the secret is absent or empty, callbacks are unsigned.
 
