@@ -28,10 +28,18 @@ export * from "./entities.js";
 export interface SlackSeedConfig {
   port?: number;
   team?: {
+    id?: string;
     name?: string;
     domain?: string;
   };
+  teams?: Array<{
+    id?: string;
+    name: string;
+    domain?: string;
+  }>;
   users?: Array<{
+    id?: string;
+    team?: string;
     name: string;
     team_id?: string;
     is_stranger?: boolean;
@@ -42,11 +50,15 @@ export interface SlackSeedConfig {
     presence?: SlackPresence;
   }>;
   channels?: Array<{
+    id?: string;
+    team?: string;
     name: string;
     is_ext_shared?: boolean;
     topic?: string;
     purpose?: string;
     is_private?: boolean;
+    shared_with?: string[];
+    members?: string[];
   }>;
   bots?: Array<{
     name: string;
@@ -217,6 +229,9 @@ export function seedFromConfig(
   if (config.team) {
     const existing = ss.teams.all()[0];
     if (existing) {
+      if (config.team.id && config.team.id !== existing.team_id) {
+        renameSlackTeamId(ss, existing.team_id, config.team.id);
+      }
       ss.teams.update(existing.id, {
         name: config.team.name ?? existing.name,
         domain: config.team.domain ?? existing.domain,
@@ -227,12 +242,23 @@ export function seedFromConfig(
   const team = ss.teams.all()[0];
   const teamId = team?.team_id ?? "T000000001";
 
+  if (config.teams) {
+    for (const t of config.teams) {
+      if (t.id && ss.teams.findOneBy("team_id", t.id)) continue;
+      ss.teams.insert({
+        team_id: t.id ?? generateSlackId("T"),
+        name: t.name,
+        domain: t.domain ?? slugifySlackBotName(t.name),
+      });
+    }
+  }
+
   if (config.users) {
     for (const u of config.users) {
       const existing = ss.users.all().find((eu) => eu.name === u.name);
       if (existing) continue;
 
-      const userId = generateSlackId("U");
+      const userId = u.id ?? generateSlackId("U");
       const email = u.profile?.email ?? u.email ?? `${u.name}@emulate.dev`;
       const realName = u.real_name ?? u.name;
       const profile = normalizeSeedProfile({
@@ -245,7 +271,7 @@ export function seedFromConfig(
       });
       ss.users.insert({
         user_id: userId,
-        team_id: u.team_id ?? teamId,
+        team_id: u.team ? resolveSeedTeamId(ss, u.team, `user ${u.name}`) : (u.team_id ?? teamId),
         is_stranger: u.is_stranger ?? false,
         name: u.name,
         real_name: profile.real_name,
@@ -267,13 +293,21 @@ export function seedFromConfig(
       const existing = ss.channels.findOneBy("name", ch.name);
       if (existing) continue;
 
-      const creator = ss.users.all()[0]?.user_id ?? "U000000001";
+      const hostTeamId = ch.team ? resolveSeedTeamId(ss, ch.team, `channel ${ch.name}`) : teamId;
+      const sharedTeamIds = (ch.shared_with ?? []).map((ref) => resolveSeedTeamId(ss, ref, `channel ${ch.name}`));
+      const memberTeams = new Set([hostTeamId, ...sharedTeamIds]);
+      const members = ss.users
+        .all()
+        .filter((u) => !config.teams || memberTeams.has(u.team_id))
+        .map((u) => u.user_id);
+      const creator =
+        ss.users.all().find((u) => u.team_id === hostTeamId)?.user_id ?? ss.users.all()[0]?.user_id ?? "U000000001";
       const now = Math.floor(Date.now() / 1000);
       const isPrivate = ch.is_private ?? false;
 
       ss.channels.insert({
-        channel_id: generateSlackId("C"),
-        team_id: teamId,
+        channel_id: ch.id ?? generateSlackId("C"),
+        team_id: hostTeamId,
         name: ch.name,
         is_ext_shared: ch.is_ext_shared ?? false,
         is_channel: !isPrivate,
@@ -281,9 +315,10 @@ export function seedFromConfig(
         is_archived: false,
         topic: { value: ch.topic ?? "", creator, last_set: now },
         purpose: { value: ch.purpose ?? "", creator, last_set: now },
-        members: ss.users.all().map((u) => u.user_id),
+        members,
         creator,
-        num_members: ss.users.all().length,
+        num_members: members.length,
+        ...(sharedTeamIds.length > 0 ? { shared_team_ids: [hostTeamId, ...sharedTeamIds] } : {}),
       });
     }
   }
@@ -346,7 +381,7 @@ export function seedFromConfig(
       ss.tokens.insert({
         token: value,
         token_type: token.type ?? "test",
-        team_id: token.team_id ?? teamId,
+        team_id: token.team_id ?? ss.users.findOneBy("user_id", userId)?.team_id ?? teamId,
         user_id: userId,
         scopes: normalizeScopes(token.scopes, DEFAULT_SLACK_SCOPES),
         app_id: token.app_id,
@@ -380,6 +415,18 @@ export function seedFromConfig(
       throw new Error("Slack view_trigger_ttl_seconds must be a positive number");
     }
     store.setData("slack.view_trigger_ttl_seconds", config.view_trigger_ttl_seconds);
+  }
+
+  for (const ch of config.channels ?? []) {
+    if (!ch.members) continue;
+    const channel = ss.channels.findOneBy("name", ch.name);
+    if (!channel) throw new Error(`Slack seed channel ${ch.name} was not created`);
+    const members = ch.members.map((ref) => {
+      const user = ss.users.findOneBy("user_id", ref) ?? ss.users.findOneBy("name", ref);
+      if (!user) throw new Error(`Slack seed channel ${ch.name} lists unknown member ${ref}`);
+      return user.user_id;
+    });
+    ss.channels.update(channel.id, { members, num_members: members.length });
   }
 
   if (config.signing_secret !== undefined) {
@@ -564,6 +611,25 @@ function seedOAuthInstallation(
     ss.installations.insert({
       installation_id: generateSlackId("I"),
       ...data,
+    });
+  }
+}
+
+function resolveSeedTeamId(ss: ReturnType<typeof getSlackStore>, ref: string, owner: string): string {
+  const team =
+    ss.teams.findOneBy("team_id", ref) ?? ss.teams.findOneBy("domain", ref) ?? ss.teams.findOneBy("name", ref);
+  if (!team) throw new Error(`Slack seed ${owner} references unknown team ${ref}`);
+  return team.team_id;
+}
+
+function renameSlackTeamId(ss: ReturnType<typeof getSlackStore>, from: string, to: string): void {
+  for (const team of ss.teams.findBy("team_id", from)) ss.teams.update(team.id, { team_id: to });
+  for (const user of ss.users.findBy("team_id", from)) ss.users.update(user.id, { team_id: to });
+  for (const channel of ss.channels.findBy("team_id", from)) ss.channels.update(channel.id, { team_id: to });
+  for (const webhook of ss.incomingWebhooks.findBy("team_id", from)) {
+    ss.incomingWebhooks.update(webhook.id, {
+      team_id: to,
+      url: webhook.url.replace(`/services/${from}/`, `/services/${to}/`),
     });
   }
 }
