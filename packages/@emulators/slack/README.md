@@ -89,7 +89,7 @@ Modal opens and pushes require values from `/api/views.generateTriggerId`. Pass 
 ### Inspector
 - `GET /` — tabbed local inspector for conversations, messages, files, views, auth records, incoming webhooks, event subscriptions, and event deliveries
 
-Register event subscription URLs with `event_subscriptions: [{ url, events? }]` in the Slack seed config. Messages that mention a bot user in a channel the bot belongs to also emit `app_mention`, and every `message` event carries `channel_type`.
+Slack Connect shared channels are seeded with `teams`, per-user `team`, and per-channel `shared_with`. Register event subscription URLs with `event_subscriptions: [{ url, events? }]` in the Slack seed config. Messages that mention a bot user in a channel the bot belongs to also emit `app_mention`, and every `message` event carries `channel_type`.
 
 When a supported write emits an `event_callback`, the payload includes the inner `event` and outer `team_id`, `event_id`, and integer Unix-seconds `event_time`. The team comes from the presented Slack token's installation; development tokens without a stored Slack record fall back to the affected channel, user, or file's team, then the seeded workspace team (or `T000000001`). Incoming webhook posts use their webhook record's team, or the target channel's team when no record matches. Each logical event has a distinct `event_id` shared by deliveries to multiple subscribers.
 

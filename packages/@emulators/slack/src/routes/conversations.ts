@@ -858,6 +858,21 @@ function formatChannel(ch: SlackChannel, viewer?: string, viewerName?: string) {
     creator: ch.creator,
     num_members: ch.num_members,
     created: createdSeconds(ch),
+    ...formatSharedChannelFields(ch),
+  };
+}
+
+function formatSharedChannelFields(ch: SlackChannel) {
+  const sharedTeamIds = ch.shared_team_ids ?? [];
+  const isExtShared = sharedTeamIds.length > 1;
+  return {
+    is_shared: isExtShared,
+    is_ext_shared: isExtShared,
+    is_org_shared: false,
+    context_team_id: ch.team_id,
+    ...(isExtShared
+      ? { shared_team_ids: sharedTeamIds, connected_team_ids: sharedTeamIds, conversation_host_id: ch.team_id }
+      : {}),
   };
 }
 

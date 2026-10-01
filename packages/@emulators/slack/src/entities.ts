@@ -72,6 +72,7 @@ export interface SlackChannel extends Entity {
   creator: string;
   num_members: number;
   last_read?: Record<string, string>;
+  shared_team_ids?: string[];
 }
 
 export type SlackJsonObject = Record<string, unknown>;
