@@ -871,7 +871,11 @@ function formatSharedChannelFields(ch: SlackChannel) {
     is_org_shared: false,
     context_team_id: ch.team_id,
     ...(isExtShared
-      ? { shared_team_ids: sharedTeamIds, connected_team_ids: sharedTeamIds, conversation_host_id: ch.team_id }
+      ? {
+          shared_team_ids: sharedTeamIds.filter((teamId) => teamId !== ch.team_id),
+          connected_team_ids: sharedTeamIds,
+          conversation_host_id: ch.team_id,
+        }
       : {}),
   };
 }
