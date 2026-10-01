@@ -1,0 +1,110 @@
+LICENSE
+  h_e9fef506e0f829 1-202
+README.md
+  h_e9fef506e0f829 1-1494
+THIRD_PARTY_NOTICES.md
+  h_e9fef506e0f829 1-39
+dist/api.d.ts
+  h_e9fef506e0f829 1-295
+dist/api.js
+  h_e9fef506e0f829 1-2663
+dist/api.js.map
+  h_e9fef506e0f829 1
+dist/chunk-PZ5AY32C.js
+  h_e9fef506e0f829 1-10
+dist/chunk-PZ5AY32C.js.map
+  h_e9fef506e0f829 1
+dist/chunk-SCWYVJ5C.js
+  h_e9fef506e0f829 1-3496
+dist/chunk-SCWYVJ5C.js.map
+  h_e9fef506e0f829 1
+dist/chunk-U6ISZSHV.js
+  h_e9fef506e0f829 1-1452
+dist/chunk-U6ISZSHV.js.map
+  h_e9fef506e0f829 1
+dist/chunk-WVQMFHQM.js
+  h_e9fef506e0f829 1-83
+dist/chunk-WVQMFHQM.js.map
+  h_e9fef506e0f829 1
+dist/dist-5ZKI3IZT.js
+  h_e9fef506e0f829 1-1043
+dist/dist-5ZKI3IZT.js.map
+  h_e9fef506e0f829 1
+dist/dist-7GUMDSMA.js
+  h_e9fef506e0f829 1-12464
+dist/dist-7GUMDSMA.js.map
+  h_e9fef506e0f829 1
+dist/dist-CFFRIYAH.js
+  h_e9fef506e0f829 1-4229
+dist/dist-CFFRIYAH.js.map
+  h_e9fef506e0f829 1
+dist/dist-EHDV2XQZ.js
+  h_e9fef506e0f829 1-5090
+dist/dist-EHDV2XQZ.js.map
+  h_e9fef506e0f829 1
+dist/dist-EXUST33R.js
+  h_e9fef506e0f829 1-2110
+dist/dist-EXUST33R.js.map
+  h_e9fef506e0f829 1
+dist/dist-HFSER75K.js
+  h_e9fef506e0f829 1-14204
+dist/dist-HFSER75K.js.map
+  h_e9fef506e0f829 1
+dist/dist-JXLEX42L.js
+  h_e9fef506e0f829 1-1911
+dist/dist-JXLEX42L.js.map
+  h_e9fef506e0f829 1
+dist/dist-MAYKNXVP.js
+  h_e9fef506e0f829 1-788
+dist/dist-MAYKNXVP.js.map
+  h_e9fef506e0f829 1
+dist/dist-NDJDEDCT.js
+  h_e9fef506e0f829 1-942
+dist/dist-NDJDEDCT.js.map
+  h_e9fef506e0f829 1
+dist/dist-NLK75RBO.js
+  h_e9fef506e0f829 1-3187
+dist/dist-NLK75RBO.js.map
+  h_e9fef506e0f829 1
+dist/dist-O35C4MCI.js
+  h_e9fef506e0f829 1-1685
+dist/dist-O35C4MCI.js.map
+  h_e9fef506e0f829 1
+dist/dist-P67YU2QF.js
+  h_e9fef506e0f829 1-2299
+dist/dist-P67YU2QF.js.map
+  h_e9fef506e0f829 1
+dist/dist-QFRX42EP.js
+  h_e9fef506e0f829 1-1019
+dist/dist-QFRX42EP.js.map
+  h_e9fef506e0f829 1
+dist/dist-V3LZMIGK.js
+  h_e9fef506e0f829 1-1419
+dist/dist-V3LZMIGK.js.map
+  h_e9fef506e0f829 1
+dist/helpers-LXLP3DFE-PEPB2NAS.js
+  h_e9fef506e0f829 1-18
+dist/helpers-LXLP3DFE-PEPB2NAS.js.map
+  h_e9fef506e0f829 1
+dist/index.js
+  h_e9fef506e0f829 1-841
+dist/index.js.map
+  h_e9fef506e0f829 1
+dist/project-worker.js
+  h_e9fef506e0f829 1-46
+dist/project-worker.js.map
+  h_e9fef506e0f829 1
+package.json
+  h_e9fef506e0f829 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "73a414ffc88e9c1ff000858a747d2948cf7ca01f",
+  "prompts": {},
+  "humans": {
+    "h_e9fef506e0f829": {
+      "author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
