@@ -203,6 +203,30 @@ slack:
       events: [message, app_mention]
 ```
 
+### Slack Connect (shared channels)
+
+Seed extra workspaces with `teams`, put users in them with `team`, and share a channel with `shared_with`. Ids are optional; set them for deterministic fixtures. `members` overrides the default channel membership (all users of the host and shared teams) and can name bot users created by `oauth_apps`.
+
+```yaml
+slack:
+  team: { id: THOME00001, name: Home Co, domain: home }
+  teams:
+    - { id: TPARTNER01, name: Partner Inc, domain: partner }
+  users:
+    - { id: UPARTNER01, name: partner-user, team: TPARTNER01, email: pat@partner.example }
+  oauth_apps:
+    - { client_id: home.app, client_secret: s, name: Home Bot, redirect_uris: [http://localhost/cb], bot_id: BHOMEBOT01, bot_user_id: UHOMEBOT01, bot_name: homebot }
+  channels:
+    - { id: CSHARED001, name: partner-shared, shared_with: [TPARTNER01], members: [admin, partner-user, homebot] }
+  tokens:
+    - { token: xoxb-home-bot, type: bot, user: homebot, bot_id: BHOMEBOT01, bot_user_id: UHOMEBOT01 }
+    - { token: xoxp-partner-user, type: user, user: partner-user }
+  event_subscriptions:
+    - url: http://localhost:3000/slack/events
+```
+
+`conversations.info` on a shared channel returns `is_shared`, `is_ext_shared`, `shared_team_ids`, `connected_team_ids`, and `conversation_host_id`. `users.info` returns each user's own `team_id`. Seeded tokens default to their user's team. Message and `app_mention` events in shared channels are delivered with the host workspace as envelope `team_id`, `is_ext_shared_channel: true`, and the author's workspace in `event.team`, `event.user_team`, and `event.source_team`.
+
 When no OAuth apps are configured, the emulator accepts any `client_id`. With apps configured, strict validation is enforced for `client_id`, `client_secret`, and `redirect_uri`.
 
 `event_subscriptions` registers Events API request URLs. The emulator POSTs each `event_callback` envelope to every matching `url`; omit `events` to receive all event types.

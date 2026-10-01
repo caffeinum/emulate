@@ -1,6 +1,11 @@
 import type { Context, RouteContext } from "@emulators/core";
 import type { SlackChannel, SlackMessage, SlackUser } from "../entities.js";
-import { dispatchSlackEvent, resolveSlackEventTeamId } from "../events.js";
+import {
+  dispatchSlackEvent,
+  resolveSlackChannelEventTeamId,
+  resolveSlackEventTeamId,
+  slackMessageTeamFields,
+} from "../events.js";
 import { getSlackStore } from "../store.js";
 import {
   formatSlackMessage,
@@ -76,7 +81,7 @@ export function chatRoutes(ctx: RouteContext): void {
     const mentionedUsers = new Set([...message.text.matchAll(/<@([^<>\s|]+)(?:\|[^<>]*)?>/g)].map((match) => match[1]));
     if (mentionedUsers.size === 0) return;
 
-    const teamId = resolveSlackEventTeamId(c, store, channel.team_id);
+    const teamId = resolveSlackChannelEventTeamId(c, store, channel);
     for (const installation of ss().installations.findBy("team_id", teamId)) {
       if (!mentionedUsers.has(installation.bot_user_id)) continue;
       const botUser = ss().users.findOneBy("user_id", installation.bot_user_id);
@@ -93,6 +98,7 @@ export function chatRoutes(ctx: RouteContext): void {
           ...formatSlackMessage(message),
           type: "app_mention",
           channel: channel.channel_id,
+          ...slackMessageTeamFields(store, channel, message.user),
           event_ts: message.ts,
         },
         installation,
@@ -219,10 +225,11 @@ export function chatRoutes(ctx: RouteContext): void {
       }
     }
 
-    await dispatchSlackEvent(store, webhooks, resolveSlackEventTeamId(c, store, ch.team_id), {
+    await dispatchSlackEvent(store, webhooks, resolveSlackChannelEventTeamId(c, store, ch), {
       ...formatSlackMessage(msg),
       type: "message",
       channel: ch.channel_id,
+      ...slackMessageTeamFields(store, ch, msg.user),
     });
     await dispatchAppMentions(c, ch, msg);
 
