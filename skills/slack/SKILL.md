@@ -223,7 +223,7 @@ slack:
     - url: http://localhost:3000/slack/events
 ```
 
-`conversations.info` on a shared channel returns `is_shared`, `is_ext_shared`, `shared_team_ids`, `connected_team_ids`, and `conversation_host_id`. `users.info` returns each user's own `team_id`. Seeded tokens default to their user's team. Message and `app_mention` events in shared channels are delivered with the host workspace as envelope `team_id`, `is_ext_shared_channel: true`, and the author's workspace in `event.team`, `event.user_team`, and `event.source_team`.
+`conversations.info` on a shared channel returns `is_shared`, `is_ext_shared`, `shared_team_ids` (external teams only), `connected_team_ids` (host plus external teams), and `conversation_host_id`. `users.info` returns each user's own `team_id`. Seeded tokens default to their user's team. Message and `app_mention` events in shared channels are delivered with the host workspace as envelope `team_id`, `is_ext_shared_channel: true`, and the author's workspace in `event.team`, `event.user_team`, and `event.source_team`.
 
 When no OAuth apps are configured, the emulator accepts any `client_id`. With apps configured, strict validation is enforced for `client_id`, `client_secret`, and `redirect_uri`.
 
