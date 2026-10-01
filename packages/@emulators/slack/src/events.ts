@@ -3,14 +3,32 @@ import type { Context, Store, WebhookDispatcher } from "@emulators/core";
 import type { SlackChannel } from "./entities.js";
 import { getSlackStore } from "./store.js";
 
-export function buildSlackEventEnvelope(teamId: string, event: Record<string, unknown>) {
+export function buildSlackEventEnvelope(teamId: string, event: Record<string, unknown>, channel?: SlackChannel) {
   return {
     type: "event_callback" as const,
     team_id: teamId,
     event_id: `Ev${randomUUID().replaceAll("-", "")}`,
     event_time: Math.floor(Date.now() / 1000),
+    ...(channel ? { is_ext_shared_channel: isSlackExtSharedChannel(channel) } : {}),
     event,
   };
+}
+
+export function isSlackExtSharedChannel(channel: SlackChannel): boolean {
+  return (channel.shared_team_ids?.length ?? 0) > 1;
+}
+
+export function resolveSlackChannelEventTeamId(c: Context, store: Store, channel: SlackChannel): string {
+  if (isSlackExtSharedChannel(channel)) return channel.team_id;
+  return resolveSlackEventTeamId(c, store, channel.team_id);
+}
+
+export function slackMessageTeamFields(store: Store, channel: SlackChannel, authorUserId?: string) {
+  const authorTeamId = authorUserId
+    ? getSlackStore(store).users.findOneBy("user_id", authorUserId)?.team_id
+    : undefined;
+  const team = authorTeamId ?? channel.team_id;
+  return isSlackExtSharedChannel(channel) ? { team, user_team: team, source_team: team } : { team };
 }
 
 export function resolveSlackEventTeamId(c: Context, store: Store, fallbackTeamId?: string): string {
@@ -53,13 +71,17 @@ export async function dispatchSlackAppMention(
   await webhooks.dispatch(
     "app_mention",
     undefined,
-    buildSlackEventEnvelope(teamId, {
-      ...event,
-      type: "app_mention",
-      channel: channel.channel_id,
-      team: channel.team_id,
-      event_ts: message.ts,
-    }),
+    buildSlackEventEnvelope(
+      teamId,
+      {
+        ...event,
+        type: "app_mention",
+        channel: channel.channel_id,
+        ...slackMessageTeamFields(store, channel, message.user),
+        event_ts: message.ts,
+      },
+      channel,
+    ),
     "slack",
   );
 }
