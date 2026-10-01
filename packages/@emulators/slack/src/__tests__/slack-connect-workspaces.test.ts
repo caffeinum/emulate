@@ -94,7 +94,7 @@ describe("Slack Connect shared channels", () => {
       id: "CSHARED001",
       is_shared: true,
       is_ext_shared: true,
-      shared_team_ids: ["THOME00001", "TPARTNER01"],
+      shared_team_ids: ["TPARTNER01"],
       connected_team_ids: ["THOME00001", "TPARTNER01"],
       context_team_id: "THOME00001",
     });
