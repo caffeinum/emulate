@@ -1,0 +1,30 @@
+{
+  "name": "emulate",
+  "version": "0.12.0",
+  "description": "Local drop-in replacement services for CI and no-network sandboxes",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/api.js",
+  "types": "./dist/api.d.ts",
+  "bin": {
+    "emulate": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "commander": "^14",
+    "picocolors": "^1.1.1",
+    "yaml": "^2"
+  },
+  "emulateSourceSha": "16c48f87a2f07c9618d2ea6c08d9f8dee1a5826c"
+}
