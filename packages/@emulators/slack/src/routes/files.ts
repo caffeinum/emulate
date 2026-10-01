@@ -1,5 +1,10 @@
 import type { Context, RouteContext } from "@emulators/core";
-import { dispatchSlackEvent, resolveSlackEventTeamId } from "../events.js";
+import {
+  dispatchSlackEvent,
+  resolveSlackChannelEventTeamId,
+  resolveSlackEventTeamId,
+  slackMessageTeamFields,
+} from "../events.js";
 import type {
   SlackChannel,
   SlackFile,
@@ -303,11 +308,12 @@ export function filesRoutes(ctx: RouteContext): void {
         }
 
         const updatedMessage = ss().messages.update(msg.id, { files: messageFiles })!;
-        await dispatchSlackEvent(store, webhooks, resolveSlackEventTeamId(c, store, channel.team_id), {
+        await dispatchSlackEvent(store, webhooks, resolveSlackChannelEventTeamId(c, store, channel), {
           ...formatSlackMessage(updatedMessage),
           type: "message",
           subtype: "file_share",
           channel: channel.channel_id,
+          ...slackMessageTeamFields(store, channel, updatedMessage.user),
         });
 
         for (const shared of messageFiles) {

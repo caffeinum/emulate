@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Context, Store, WebhookDispatcher } from "@emulators/core";
 import { isSlackConnectChannel } from "./connect.js";
-import type { SlackInstallation } from "./entities.js";
+import type { SlackChannel, SlackInstallation } from "./entities.js";
 import { generateTs } from "./helpers.js";
 import { getSlackStore } from "./store.js";
 
@@ -72,6 +72,21 @@ function buildSlackEventEnvelope(
         : {}),
     },
   };
+}
+
+export function resolveSlackChannelEventTeamId(c: Context, store: Store, channel: SlackChannel): string {
+  if (isSlackConnectChannel(store, channel)) return channel.team_id;
+  return resolveSlackEventTeamId(c, store, channel.team_id);
+}
+
+export function slackMessageTeamFields(store: Store, channel: SlackChannel, authorUserId?: string) {
+  const authorTeamId = authorUserId
+    ? getSlackStore(store).users.findOneBy("user_id", authorUserId)?.team_id
+    : undefined;
+  const team = authorTeamId ?? channel.team_id;
+  return isSlackConnectChannel(store, channel) && team !== channel.team_id
+    ? { team, user_team: team, source_team: team }
+    : { team };
 }
 
 export function resolveSlackEventTeamId(c: Context, store: Store, fallbackTeamId?: string): string {
