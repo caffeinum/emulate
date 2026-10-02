@@ -2828,7 +2828,7 @@ ${source}`
 };
 
 // src/env-template.ts
-var PLACEHOLDER = /\{([^{}]+)\}/g;
+var PLACEHOLDER = /\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}|\{([^{}]+)\}/g;
 function validateEnvBlock(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("env must map environment variable names to strings");
@@ -2849,22 +2849,22 @@ function resolveEnv(env, services, outside = process.env) {
   for (const [name, template] of Object.entries(env)) {
     resolved[name] = template.replace(
       PLACEHOLDER,
-      (_match, expression) => resolveExpression(name, expression.trim(), byName, outside)
+      (match, outsideName, fallback, expression) => {
+        if (match === "$$") return "$";
+        if (outsideName) {
+          const value = outside[outsideName];
+          if (value !== void 0) return value;
+          if (fallback !== void 0) return fallback;
+          throw new Error(`env.${name}: \${${outsideName}} is not set in the environment emulate was started with`);
+        }
+        return resolveExpression(name, expression.trim(), byName);
+      }
     );
   }
   return resolved;
 }
-function resolveExpression(variable, expression, services, outside) {
+function resolveExpression(variable, expression, services) {
   const [serviceName, ...path] = splitPath(expression);
-  if (serviceName === "env") {
-    const [outsideName, ...rest] = path;
-    if (!outsideName || rest.length > 0) throw new Error(`env.${variable}: write {env.NAME} to pass NAME through`);
-    const value2 = outside[outsideName];
-    if (value2 === void 0) {
-      throw new Error(`env.${variable}: {env.${outsideName}} is not set in the environment emulate was started with`);
-    }
-    return value2;
-  }
   const service = serviceName ? services.get(serviceName) : void 0;
   if (!service) {
     const known = [...services.keys()].join(", ") || "none";
@@ -2971,7 +2971,6 @@ async function loadConfig(options = {}, onDependenciesChange) {
     if (new Set(selected).size !== selected.length) throw new Error("A service cannot be selected more than once");
     const services = [];
     for (const name of selected) {
-      if (name === "env") throw new Error('"env" is reserved for {env.NAME} templates; choose another service name');
       if (!/^[a-z][a-z0-9-]*$/.test(name))
         throw new Error(`Invalid service name "${name}". Use lowercase letters, digits, and hyphens.`);
       const entry = entries[name] ?? (isBuiltin(name) ? { emulator: name } : void 0);
@@ -3617,4 +3616,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-K3NV5XI2.js.map
+//# sourceMappingURL=chunk-Z4EPRPQB.js.map
