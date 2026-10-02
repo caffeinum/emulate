@@ -398,3 +398,11 @@ telegram:
       members: [developer]
       bots: [emulate_bot]
       topics: [general-ideas]
+
+workos:
+  users:
+    - email: developer@example.com
+      first_name: Developer
+      email_verified: true
+  organizations:
+    - name: Example Org

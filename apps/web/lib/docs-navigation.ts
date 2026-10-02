@@ -30,6 +30,7 @@ export const docsSections: NavSection[] = [
       { name: "Linear API", label: "Linear", href: "/docs/linear" },
       { name: "Twilio API", label: "Twilio", href: "/docs/twilio" },
       { name: "Telegram Bot API", label: "Telegram", href: "/docs/telegram" },
+      { name: "WorkOS API", label: "WorkOS", href: "/docs/workos" },
       { name: "Apple Sign In", label: "Apple", href: "/docs/apple" },
       { name: "Microsoft Entra ID", href: "/docs/microsoft" },
       { name: "AWS", href: "/docs/aws" },
