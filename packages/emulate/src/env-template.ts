@@ -11,7 +11,8 @@ export interface EnvServiceContext {
   seed?: unknown;
 }
 
-const PLACEHOLDER = /\{([^{}]+)\}/g;
+// $$ is a literal dollar; ${NAME} or ${NAME:-default} reads the outside environment; {service.path} reads an emulator.
+const PLACEHOLDER = /\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}|\{([^{}]+)\}/g;
 
 export function validateEnvBlock(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -36,29 +37,25 @@ export function resolveEnv(
   const byName = new Map(services.map((service) => [service.name, service]));
   const resolved: Record<string, string> = {};
   for (const [name, template] of Object.entries(env)) {
-    resolved[name] = template.replace(PLACEHOLDER, (_match, expression: string) =>
-      resolveExpression(name, expression.trim(), byName, outside),
+    resolved[name] = template.replace(
+      PLACEHOLDER,
+      (match, outsideName?: string, fallback?: string, expression?: string) => {
+        if (match === "$$") return "$";
+        if (outsideName) {
+          const value = outside[outsideName];
+          if (value !== undefined) return value;
+          if (fallback !== undefined) return fallback;
+          throw new Error(`env.${name}: \${${outsideName}} is not set in the environment emulate was started with`);
+        }
+        return resolveExpression(name, expression!.trim(), byName);
+      },
     );
   }
   return resolved;
 }
 
-function resolveExpression(
-  variable: string,
-  expression: string,
-  services: Map<string, EnvServiceContext>,
-  outside: NodeJS.ProcessEnv,
-): string {
+function resolveExpression(variable: string, expression: string, services: Map<string, EnvServiceContext>): string {
   const [serviceName, ...path] = splitPath(expression);
-  if (serviceName === "env") {
-    const [outsideName, ...rest] = path;
-    if (!outsideName || rest.length > 0) throw new Error(`env.${variable}: write {env.NAME} to pass NAME through`);
-    const value = outside[outsideName];
-    if (value === undefined) {
-      throw new Error(`env.${variable}: {env.${outsideName}} is not set in the environment emulate was started with`);
-    }
-    return value;
-  }
   const service = serviceName ? services.get(serviceName) : undefined;
   if (!service) {
     const known = [...services.keys()].join(", ") || "none";

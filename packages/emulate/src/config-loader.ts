@@ -109,7 +109,6 @@ export async function loadConfig(
     if (new Set(selected).size !== selected.length) throw new Error("A service cannot be selected more than once");
     const services: ResolvedService[] = [];
     for (const name of selected) {
-      if (name === "env") throw new Error('"env" is reserved for {env.NAME} templates; choose another service name');
       if (!/^[a-z][a-z0-9-]*$/.test(name))
         throw new Error(`Invalid service name "${name}". Use lowercase letters, digits, and hyphens.`);
       const entry = entries[name] ?? (isBuiltin(name) ? { emulator: name } : undefined);
