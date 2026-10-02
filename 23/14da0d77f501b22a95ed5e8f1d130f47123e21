@@ -1,0 +1,19 @@
+THIRD_PARTY_NOTICES.md
+  s_7f7bb4f6550518::t_0748002b610c1c 3-4,23-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2314da0d77f501b22a95ed5e8f1d130f47123e21",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
