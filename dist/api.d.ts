@@ -238,6 +238,8 @@ interface EmulateConfig {
     env?: Record<string, string>;
     /** Shell command `emulate run` executes after the emulators start and before the app, with the same env. */
     prepare?: string;
+    /** Shell command `emulate run` executes after the app exits, even when it fails. */
+    cleanup?: string;
 }
 declare function defineConfig<Definitions extends Record<string, EmulatorDefinition | string>>(config: {
     services: {
@@ -247,6 +249,7 @@ declare function defineConfig<Definitions extends Record<string, EmulatorDefinit
     tokens?: EmulateConfig["tokens"];
     env?: EmulateConfig["env"];
     prepare?: string;
+    cleanup?: string;
 }): typeof config;
 
 declare const SERVICE_NAME_LIST: readonly ["vercel", "github", "google", "slack", "apple", "microsoft", "okta", "aws", "resend", "stripe", "mongoatlas", "clerk", "linear", "twilio", "telegram"];

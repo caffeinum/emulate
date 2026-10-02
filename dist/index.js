@@ -14,7 +14,7 @@ import {
   registerAliases,
   removeAliases,
   resolveEnv
-} from "./chunk-KJJJVE5U.js";
+} from "./chunk-W4Y6BGYQ.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
@@ -716,10 +716,15 @@ async function runCommand(options, command) {
     console.error(`emulate: ${run.metadata.services.map((s) => `${s.name} ${s.url}`).join(", ")}`);
     const outside = PASSTHROUGH.flatMap((name) => process.env[name] ? [[name, process.env[name]]] : []);
     const childEnv = { ...Object.fromEntries(outside), ...env };
-    const { prepare } = run.metadata;
-    const prepared = prepare ? await runChild(prepare, childEnv) : 0;
-    if (prepared !== 0) throw new Error(`prepare exited with ${prepared}: ${prepare}`);
-    return await runChild(command, childEnv);
+    const { prepare, cleanup } = run.metadata;
+    try {
+      const prepared = prepare ? await runChild(prepare, childEnv) : 0;
+      if (prepared !== 0) throw new Error(`prepare exited with ${prepared}: ${prepare}`);
+      return await runChild(command, childEnv);
+    } finally {
+      const cleaned = cleanup ? await runChild(cleanup, childEnv).catch(() => 1) : 0;
+      if (cleaned !== 0) console.error(`emulate: cleanup exited with ${cleaned}: ${cleanup}`);
+    }
   } finally {
     await run.close().catch(console.error);
     removeAliases(aliases);

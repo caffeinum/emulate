@@ -2928,7 +2928,7 @@ async function loadConfig(options = {}, onDependenciesChange) {
       if (!isRecord(raw)) throw new Error(`${path} must export a configuration object`);
     }
     const unknown = Object.keys(raw).filter(
-      (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env", "prepare"].includes(key)
+      (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env", "prepare", "cleanup"].includes(key)
     );
     if (unknown.length)
       throw new Error(`Unknown config key: ${unknown.join(", ")}. Register custom APIs under services.`);
@@ -2941,8 +2941,9 @@ async function loadConfig(options = {}, onDependenciesChange) {
     )))
       throw new Error("tokens must map token strings to { login, scopes? }");
     const env = raw.env === void 0 ? {} : validateEnvBlock(raw.env);
-    if (raw.prepare !== void 0 && (typeof raw.prepare !== "string" || !raw.prepare.trim()))
-      throw new Error("prepare must be a shell command");
+    for (const hook of ["prepare", "cleanup"])
+      if (raw[hook] !== void 0 && (typeof raw[hook] !== "string" || !raw[hook].trim()))
+        throw new Error(`${hook} must be a shell command`);
     const entries = { ...raw.services };
     for (const name of SERVICE_NAMES)
       if (Object.hasOwn(raw, name)) {
@@ -3001,7 +3002,17 @@ async function loadConfig(options = {}, onDependenciesChange) {
         persistence: typeof persistence === "string" ? resolve2(directory, persistence) : persistence
       });
     }
-    return { path, directory, services, tokens: raw.tokens, env, prepare: raw.prepare, watch: raw.watch ?? [], loader };
+    return {
+      path,
+      directory,
+      services,
+      tokens: raw.tokens,
+      env,
+      prepare: raw.prepare,
+      cleanup: raw.cleanup,
+      watch: raw.watch ?? [],
+      loader
+    };
   } catch (error) {
     loader.close();
     throw error;
@@ -3421,7 +3432,8 @@ async function prepareProject(options, retained = {}, reload = false, onDependen
     secrets: [],
     retained: {},
     env: config.env,
-    prepare: config.prepare
+    prepare: config.prepare,
+    cleanup: config.cleanup
   };
   let closed = false;
   let accepting = false;
@@ -3610,4 +3622,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-KJJJVE5U.js.map
+//# sourceMappingURL=chunk-W4Y6BGYQ.js.map
