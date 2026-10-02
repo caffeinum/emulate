@@ -100,7 +100,8 @@ env:
   SLACK_API_URL: "{slack.url}/api"
   SLACK_SIGNING_SECRET: "{slack.signing_secret}"
   DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_dev
-  OPENAI_API_KEY: "{env.OPENAI_API_KEY}"   # explicit passthrough from your shell
+  OPENAI_API_KEY: "${OPENAI_API_KEY}"      # passthrough from your shell
+  REDIS_URL: "${REDIS_URL:-redis://localhost:6379}"
 ```
 
 ```bash
@@ -109,7 +110,7 @@ npx emulate run -- pnpm test               # exits with the command's exit code
 npx emulate run --portless -- pnpm dev     # https://{service}.emulate.localhost URLs
 ```
 
-`{service.url}`, `{service.port}`, and `{service.host}` are where that emulator runs. `{service.some.path}` (with `[n]` for list items) reads a value from that service's seed config. `{env.NAME}` passes `NAME` through from the environment `emulate run` was started in. Other values, such as a local database URL, pass through unchanged. A template that names an unknown service or a value missing from the seed stops startup with an error rather than guessing. `run` accepts the same `--port`, `--host`, `--service`, `--config`, `--base-url`, and `--portless` options as `start`.
+`{service.url}`, `{service.port}`, and `{service.host}` are where that emulator runs. `{service.some.path}` (with `[n]` for list items) reads a value from that service's seed config. `${NAME}` passes `NAME` through from the environment `emulate run` was started in, failing if it is unset; `${NAME:-default}` falls back to a default, and `$$` writes a literal `$`. Other values, such as a local database URL, pass through unchanged. A template that names an unknown service or a value missing from the seed stops startup with an error rather than guessing. `run` accepts the same `--port`, `--host`, `--service`, `--config`, `--base-url`, and `--portless` options as `start`.
 
 ## Programmatic API
 
