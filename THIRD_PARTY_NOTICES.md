@@ -42,7 +42,9 @@ SOFTWARE.
 
 The Telegram Bot API emulator in `packages/@emulators/telegram` runs
 [telegram-bot-test-server](https://github.com/anatolyben/telegram-bot-test-server)
-0.9.0, which is bundled into the `emulate` package. Its copyright and MIT
+(0.9.0 plus the formatting, reply and file name changes proposed upstream in
+anatolyben/telegram-bot-test-server#1, pinned from caffeinum/telegram-bot-test-server),
+which is bundled into the `emulate` package. Its copyright and MIT
 license notice are reproduced below.
 
 Source: https://github.com/anatolyben/telegram-bot-test-server
