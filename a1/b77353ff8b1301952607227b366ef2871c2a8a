@@ -1,0 +1,28 @@
+README.md
+  h_e9fef506e0f829 1204-1206,1221
+dist/api.js
+  h_e9fef506e0f829 2499
+dist/chunk-U2HC2W3Q.js
+  h_e9fef506e0f829 597,3530
+dist/dist-TZMFHJQR.js
+  h_e9fef506e0f829 6219,6253-6265,6332
+dist/dist-TZMFHJQR.js.map
+  h_e9fef506e0f829 1
+dist/index.js
+  h_e9fef506e0f829 16
+dist/project-worker.js
+  h_e9fef506e0f829 3
+package.json
+  h_e9fef506e0f829 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a1b77353ff8b1301952607227b366ef2871c2a8a",
+  "prompts": {},
+  "humans": {
+    "h_e9fef506e0f829": {
+      "author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
