@@ -101,9 +101,12 @@ export function createServer(plugin: ServicePlugin, options: ServerOptions = {})
     });
   }
 
-  plugin.register(app, store, webhooks, baseUrl, tokenMap, { baseUrlDerived: options.baseUrlDerived });
+  const dispose = plugin.register(app, store, webhooks, baseUrl, tokenMap, { baseUrlDerived: options.baseUrlDerived });
+  const close = async () => {
+    if (dispose) await dispose();
+  };
 
   app.notFound((c) => renderError(notFound(), c));
 
-  return { app, store, webhooks, port, baseUrl, tokenMap };
+  return { app, store, webhooks, port, baseUrl, tokenMap, close };
 }

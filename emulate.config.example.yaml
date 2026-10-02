@@ -399,3 +399,21 @@ ai:
       reply:
         - type: text
           text: Hello from the emulate AI service.
+telegram:
+  bots:
+    - token: "1000000001:emulate-telegram-bot-token"
+      username: emulate_bot
+      first_name: Emulate Bot
+      description: A local Telegram bot
+  users:
+    - name: alice
+      first_name: Alice
+      username: alice
+  chats:
+    - name: team
+      title: Team
+      owner: alice
+      forum: true
+      members: [developer]
+      bots: [emulate_bot]
+      topics: [general-ideas]
