@@ -6216,6 +6216,7 @@ async function buildWorld(generation, seed, createBackend) {
       }
     }
     await drainSeedUpdates(backend, seed.bots);
+    await registerSeedWebhooks(backend, seed.bots);
     const { calls } = await backend.getCalls();
     return {
       generation,
@@ -6247,6 +6248,19 @@ async function drainSeedUpdates(backend, bots) {
     const pending = await call({ timeout: 0 });
     const last = pending.at(-1);
     if (last) await call({ timeout: 0, offset: last.update_id + 1 });
+  }
+}
+async function registerSeedWebhooks(backend, bots) {
+  for (const bot of bots) {
+    if (!bot.webhook) continue;
+    if (!bot.webhook.url) throw new Error(`telegram seed bot ${bot.username} has a webhook without a url`);
+    const response = await fetch(`${backend.origin}/bot${bot.token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bot.webhook)
+    });
+    const body = await response.json();
+    if (!body.ok) throw new Error(`telegram seed bot ${bot.username} webhook was refused: ${body.description}`);
   }
 }
 function seedDefaults(store) {
@@ -6315,4 +6329,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-2R54VRGU.js.map
+//# sourceMappingURL=dist-TZMFHJQR.js.map

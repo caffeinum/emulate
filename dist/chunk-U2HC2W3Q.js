@@ -594,7 +594,7 @@ var SERVICE_REGISTRY = {
     label: "Telegram Bot API emulator",
     endpoints: "Bot API at /bot<token>/<method> (messages, media, files, webhooks, getUpdates, forum topics, commands, descriptions), control API, inspector",
     async load() {
-      const mod = await import("./dist-2R54VRGU.js");
+      const mod = await import("./dist-TZMFHJQR.js");
       return { plugin: mod.telegramPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -3527,4 +3527,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-AY3REXIM.js.map
+//# sourceMappingURL=chunk-U2HC2W3Q.js.map
