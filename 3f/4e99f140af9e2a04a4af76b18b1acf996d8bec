@@ -1,0 +1,86 @@
+packages/@emulators/telegram/src/__tests__/helpers.ts
+  s_7f7bb4f6550518::t_aa1ee5c18ef3a9 1-121
+apps/web/lib/page-titles.ts
+  s_7f7bb4f6550518::t_6483e224a305c9 14
+packages/@emulators/core/src/server.ts
+  s_7f7bb4f6550518::t_be7e3e56440f7d 56,93-96,108
+packages/emulate/src/api.ts
+  s_7f7bb4f6550518::t_be7e3e56440f7d 189-195,227
+packages/@emulators/telegram/vitest.config.ts
+  s_7f7bb4f6550518::t_32f3c24aaa8be4 1-8
+packages/@emulators/telegram/src/backend/types.ts
+  s_7f7bb4f6550518::t_b5b32a10178fbe 1-7,16-101
+  s_7f7bb4f6550518::t_2ad27d0c84427d 8-15
+packages/@emulators/telegram/src/backend/test-server.ts
+  s_7f7bb4f6550518::t_2ad27d0c84427d 2,19,81,83-107
+  s_7f7bb4f6550518::t_0f11b164c0b1d8 1,3-18,20-80,82
+packages/@emulators/core/src/plugin.ts
+  s_7f7bb4f6550518::t_be7e3e56440f7d 14-15,18-27
+apps/web/app/docs/telegram/layout.tsx
+  s_7f7bb4f6550518::t_6483e224a305c9 1-7
+README.md
+  s_7f7bb4f6550518::t_6483e224a305c9 34,1168-1247,1542,1572
+  s_7f7bb4f6550518::t_50ede646c91036 1573
+packages/@emulators/core/src/index.ts
+  s_7f7bb4f6550518::t_be7e3e56440f7d 31,73
+packages/emulate/src/registry.ts
+  s_7f7bb4f6550518::t_be7e3e56440f7d 43,640-666,668
+  s_7f7bb4f6550518::t_45ab6aa756dac1 667,669
+packages/@emulators/telegram/src/index.ts
+  s_7f7bb4f6550518::t_b37ce0bbcaf521 1-17,19-96
+  s_7f7bb4f6550518::t_bb7edb66e85be4 18
+packages/@emulators/telegram/tsup.config.ts
+  s_7f7bb4f6550518::t_32f3c24aaa8be4 1-19
+packages/emulate/package.json
+  s_7f7bb4f6550518::t_be7e3e56440f7d 78-79
+packages/@emulators/telegram/src/__tests__/telegram.test.ts
+  s_7f7bb4f6550518::t_d5125903034b6c 103,111-112,119-121,139-145,165,260-279
+  s_7f7bb4f6550518::t_2ad27d0c84427d 127-130
+  s_7f7bb4f6550518::t_a48eeb6b42c1e1 1-102,104-110,113-118,122-126,131-138,146-164,166-259,280-281
+emulate.config.example.yaml
+  s_7f7bb4f6550518::t_f16ae573f3d586 382-400
+apps/web/lib/docs-navigation.ts
+  s_7f7bb4f6550518::t_6483e224a305c9 32
+apps/web/app/docs/telegram/page.mdx
+  s_7f7bb4f6550518::t_6483e224a305c9 1-78
+packages/@emulators/telegram/src/routes/bot-api.ts
+  s_7f7bb4f6550518::t_2b65af96b011c6 133-137,141,149-163,165-175
+  s_7f7bb4f6550518::t_d5125903034b6c 164
+  s_7f7bb4f6550518::t_d0a6763f9a3ab2 99-107
+  s_7f7bb4f6550518::t_2ad27d0c84427d 2,208-212
+  s_7f7bb4f6550518::t_07a2aa3e2c0168 1,3-98,108-132,138-140,142-148,176-207,213-276
+packages/@emulators/telegram/src/routes/control.ts
+  s_7f7bb4f6550518::t_d5125903034b6c 143-146
+  s_7f7bb4f6550518::t_2ad27d0c84427d 2,39
+  s_7f7bb4f6550518::t_7eee99cd868739 1,3-38,40-142,147-260
+packages/@emulators/telegram/src/runtime.ts
+  s_7f7bb4f6550518::t_b261e7f9946184 1-147,149-156,158-167,175-243,249-256
+  s_7f7bb4f6550518::t_d5125903034b6c 244-248
+  s_7f7bb4f6550518::t_6f8f4e714a4b7c 148,157,168-174
+packages/@emulators/telegram/tsconfig.json
+  s_7f7bb4f6550518::t_32f3c24aaa8be4 1-8
+packages/@emulators/telegram/package.json
+  s_7f7bb4f6550518::t_32f3c24aaa8be4 1-50
+packages/@emulators/telegram/README.md
+  s_7f7bb4f6550518::t_6483e224a305c9 1-78
+skills/telegram/SKILL.md
+  s_7f7bb4f6550518::t_6483e224a305c9 1-84
+pnpm-lock.yaml
+  s_7f7bb4f6550518::t_695c38a9e21cf8 818-839,929-931,1835-1837,6183,6532-6535,8851-8855,10821-10822,11235,11444,12709,13639,15258,15535,15700,15859-15868,15957,16267,16925,16936,16953,16989,17053,18325,19023,19112-19113,19211,19215,19239,19243,19714,19718,19761,19763-19764
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3f4e99f140af9e2a04a4af76b18b1acf996d8bec",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
