@@ -186,7 +186,13 @@ async function createBuiltinEmulator(options: EmulatorOptions): Promise<Emulator
 
     const fallbackUser = entry.defaultFallback(svcSeedConfig);
 
-    const { app, store, webhooks, tokenMap } = createServer(loaded.plugin, {
+    const {
+      app,
+      store,
+      webhooks,
+      tokenMap,
+      close: closePlugin,
+    } = createServer(loaded.plugin, {
       port,
       baseUrl,
       tokens,
@@ -218,7 +224,7 @@ async function createBuiltinEmulator(options: EmulatorOptions): Promise<Emulator
         seed();
       },
       close(): Promise<void> {
-        return (closing ??= closeHttpServer(httpServer));
+        return (closing ??= Promise.all([closePlugin(), closeHttpServer(httpServer)]).then(() => undefined));
       },
     };
   } catch (error) {

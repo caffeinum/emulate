@@ -40,6 +40,7 @@ const SERVICE_NAME_LIST = [
   "clerk",
   "linear",
   "twilio",
+  "telegram",
 ] as const;
 export type ServiceName = (typeof SERVICE_NAME_LIST)[number];
 export const SERVICE_NAMES: readonly ServiceName[] = SERVICE_NAME_LIST;
@@ -633,6 +634,36 @@ export const SERVICE_REGISTRY: Record<ServiceName, ServiceEntry> = {
         conversations: {
           services: [{ friendly_name: "Local Conversations" }],
         },
+      },
+    },
+  },
+
+  telegram: {
+    label: "Telegram Bot API emulator",
+    endpoints:
+      "Bot API at /bot<token>/<method> (messages, media, files, webhooks, getUpdates, forum topics, commands, descriptions), control API, inspector",
+    async load() {
+      const mod = await import("@emulators/telegram");
+      return { plugin: mod.telegramPlugin, seedFromConfig: mod.seedFromConfig };
+    },
+    defaultFallback() {
+      return { login: "telegram", id: 1, scopes: [] };
+    },
+    initConfig: {
+      telegram: {
+        bots: [{ token: "1000000001:emulate-telegram-bot-token", username: "emulate_bot", first_name: "Emulate Bot" }],
+        users: [{ name: "alice", first_name: "Alice", username: "alice" }],
+        chats: [
+          {
+            name: "team",
+            title: "Team",
+            owner: "alice",
+            forum: true,
+            members: ["developer"],
+            bots: ["emulate_bot"],
+            topics: ["general-ideas"],
+          },
+        ],
       },
     },
   },
