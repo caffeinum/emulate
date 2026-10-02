@@ -159,7 +159,8 @@ export function createPreparedServiceServer(preparedService: PreparedService, to
   const appKeyResolver: AppKeyResolver | undefined = loadedSvc.createAppKeyResolver
     ? (appId) => cachedResolver!(appId)
     : undefined;
-  const fallbackUser = entry.defaultFallback(svcSeedConfig);
+  // strict_tokens: unknown tokens get 401 instead of acting as the default user.
+  const fallbackUser = svcSeedConfig?.strict_tokens === true ? undefined : entry.defaultFallback(svcSeedConfig);
   const server = createServer(loadedSvc.plugin, {
     port,
     baseUrl,
