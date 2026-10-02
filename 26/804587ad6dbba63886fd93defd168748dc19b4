@@ -1,0 +1,31 @@
+dist/api.js
+  s_261ece75063d3f::t_59e31bf4beeed5 2499
+dist/chunk-AY3REXIM.js
+  s_261ece75063d3f::t_7bd7b726f45688 597,3530
+dist/dist-2R54VRGU.js
+  s_261ece75063d3f::t_e70c29c9f9f1e3 5715,5722-5724,5895-5904,5908,5924,5936,5943,5951,5955,5967,5980,5991,6000,6004,6014,6024,6292,6318
+dist/dist-2R54VRGU.js.map
+  s_261ece75063d3f::t_bcabaa83366298 1
+dist/index.js
+  s_261ece75063d3f::t_babdfb1282fd14 16
+dist/project-worker.js
+  s_261ece75063d3f::t_d28c8d6da389b3 3
+package.json
+  s_261ece75063d3f::t_f870ecd5d7b6df 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "26804587ad6dbba63886fd93defd168748dc19b4",
+  "prompts": {},
+  "sessions": {
+    "s_261ece75063d3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e99f505b-5d6c-4040-95a4-8b8a71c9d447",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
