@@ -219,6 +219,18 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
 
     debug("github.oauth", `[OAuth token] parsed keys: ${Object.keys(raw).join(", ")}`);
 
+    // client_secret_basic (RFC 6749 2.3.1), as next-auth sends by default.
+    const basic = /^Basic\s+(.+)$/i.exec(c.req.header("Authorization") ?? "");
+    if (basic && raw.client_id === undefined) {
+      const decoded = Buffer.from(basic[1]!, "base64").toString("utf8");
+      const separator = decoded.indexOf(":");
+      const formDecode = (value: string) => decodeURIComponent(value.replace(/\+/g, " "));
+      if (separator > 0) {
+        raw.client_id = formDecode(decoded.slice(0, separator));
+        raw.client_secret = formDecode(decoded.slice(separator + 1));
+      }
+    }
+
     const code = String(raw.code ?? "");
     const bodyClientId = String(raw.client_id ?? "");
     const bodyClientSecret = String(raw.client_secret ?? "").slice(0, 4) + "****";
