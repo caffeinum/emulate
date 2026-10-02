@@ -2843,19 +2843,28 @@ function validateEnvBlock(value) {
   }
   return env;
 }
-function resolveEnv(env, services) {
+function resolveEnv(env, services, outside = process.env) {
   const byName = new Map(services.map((service) => [service.name, service]));
   const resolved = {};
   for (const [name, template] of Object.entries(env)) {
     resolved[name] = template.replace(
       PLACEHOLDER,
-      (_match, expression) => resolveExpression(name, expression.trim(), byName)
+      (_match, expression) => resolveExpression(name, expression.trim(), byName, outside)
     );
   }
   return resolved;
 }
-function resolveExpression(variable, expression, services) {
+function resolveExpression(variable, expression, services, outside) {
   const [serviceName, ...path] = splitPath(expression);
+  if (serviceName === "env") {
+    const [outsideName, ...rest] = path;
+    if (!outsideName || rest.length > 0) throw new Error(`env.${variable}: write {env.NAME} to pass NAME through`);
+    const value2 = outside[outsideName];
+    if (value2 === void 0) {
+      throw new Error(`env.${variable}: {env.${outsideName}} is not set in the environment emulate was started with`);
+    }
+    return value2;
+  }
   const service = serviceName ? services.get(serviceName) : void 0;
   if (!service) {
     const known = [...services.keys()].join(", ") || "none";
@@ -2962,6 +2971,7 @@ async function loadConfig(options = {}, onDependenciesChange) {
     if (new Set(selected).size !== selected.length) throw new Error("A service cannot be selected more than once");
     const services = [];
     for (const name of selected) {
+      if (name === "env") throw new Error('"env" is reserved for {env.NAME} templates; choose another service name');
       if (!/^[a-z][a-z0-9-]*$/.test(name))
         throw new Error(`Invalid service name "${name}". Use lowercase letters, digits, and hyphens.`);
       const entry = entries[name] ?? (isBuiltin(name) ? { emulator: name } : void 0);
@@ -3607,4 +3617,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-QVLC7IGJ.js.map
+//# sourceMappingURL=chunk-K3NV5XI2.js.map
