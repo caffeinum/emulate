@@ -85,3 +85,6 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 ```
 
 <!-- opensrc:end -->
+## Fork (caffeinum/emulate)
+
+This checkout is the caffeinum fork. `main` carries the fork's changes. `upstream` is vercel-labs/emulate: sync by merging `upstream/main` into `main`, never by force-pushing. Consumers install the built package from the `dist` branch by commit sha. After pushing `main`, run `scripts/publish-dist-branch.sh` from a clean `main` checkout to add a dist commit (`source: main@<sha>`).
