@@ -252,7 +252,7 @@ declare function defineConfig<Definitions extends Record<string, EmulatorDefinit
     cleanup?: string;
 }): typeof config;
 
-declare const SERVICE_NAME_LIST: readonly ["vercel", "github", "google", "slack", "apple", "microsoft", "okta", "aws", "resend", "stripe", "mongoatlas", "clerk", "linear", "twilio", "telegram"];
+declare const SERVICE_NAME_LIST: readonly ["vercel", "github", "google", "slack", "apple", "microsoft", "okta", "aws", "resend", "stripe", "mongoatlas", "clerk", "linear", "twilio", "telegram", "workos"];
 type ServiceName = (typeof SERVICE_NAME_LIST)[number];
 
 interface SeedConfig {

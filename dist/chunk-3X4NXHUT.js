@@ -18,7 +18,8 @@ var SERVICE_NAME_LIST = [
   "clerk",
   "linear",
   "twilio",
-  "telegram"
+  "telegram",
+  "workos"
 ];
 var SERVICE_NAMES = SERVICE_NAME_LIST;
 var SERVICE_REGISTRY = {
@@ -615,6 +616,23 @@ var SERVICE_REGISTRY = {
             topics: ["general-ideas"]
           }
         ]
+      }
+    }
+  },
+  workos: {
+    label: "WorkOS API emulator (via @workos/emulate)",
+    endpoints: "AuthKit authorize/authenticate, user management, organizations, sessions, JWKS, SSO, API keys",
+    async load() {
+      const mod = await import("./dist-4DSJ5MQD.js");
+      return { plugin: mod.workosPlugin, seedFromConfig: mod.seedFromConfig };
+    },
+    defaultFallback() {
+      return { login: "workos", id: 1, scopes: [] };
+    },
+    initConfig: {
+      workos: {
+        users: [{ email: "developer@example.com", first_name: "Developer", email_verified: true }],
+        organizations: [{ name: "Example Org" }]
       }
     }
   }
@@ -3622,4 +3640,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-46P7MMN7.js.map
+//# sourceMappingURL=chunk-3X4NXHUT.js.map

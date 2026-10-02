@@ -2517,6 +2517,23 @@ var SERVICE_REGISTRY = {
         ]
       }
     }
+  },
+  workos: {
+    label: "WorkOS API emulator (via @workos/emulate)",
+    endpoints: "AuthKit authorize/authenticate, user management, organizations, sessions, JWKS, SSO, API keys",
+    async load() {
+      const mod = await import("./dist-4DSJ5MQD.js");
+      return { plugin: mod.workosPlugin, seedFromConfig: mod.seedFromConfig };
+    },
+    defaultFallback() {
+      return { login: "workos", id: 1, scopes: [] };
+    },
+    initConfig: {
+      workos: {
+        users: [{ email: "developer@example.com", first_name: "Developer", email_verified: true }],
+        organizations: [{ name: "Example Org" }]
+      }
+    }
   }
 };
 
