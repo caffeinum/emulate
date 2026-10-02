@@ -5087,4 +5087,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-EHDV2XQZ.js.map
+//# sourceMappingURL=dist-IPEG4W3H.js.map
