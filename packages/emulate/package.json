@@ -80,6 +80,7 @@
     "tsc-ts": "0.1.3",
     "tsup": "^8",
     "typescript": "^7.0.2",
-    "@emulators/telegram": "workspace:*"
+    "@emulators/telegram": "workspace:*",
+    "@emulators/workos": "workspace:*"
   }
 }
