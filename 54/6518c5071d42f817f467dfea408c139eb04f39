@@ -1,0 +1,84 @@
+README.md
+  h_e9fef506e0f829 141-144
+dist/api.js
+  h_e9fef506e0f829 945-968,1953,1980,2044,2126,2207,2232,2257,2285,2307,2324,2361,2400,2465,2521,2684
+dist/api.js.map
+  h_e9fef506e0f829 1
+dist/chunk-MALWIZCK.js
+  h_e9fef506e0f829 30,57,121,203,284,309,334,362,384,401,438,477,542,598,1592-1615,3415,3667
+dist/chunk-MALWIZCK.js.map
+  h_e9fef506e0f829 1
+dist/dist-2NJAUFUP.js
+  h_e9fef506e0f829 1043
+dist/dist-2NJAUFUP.js.map
+  h_e9fef506e0f829 1
+dist/dist-7YO5GWOM.js
+  h_e9fef506e0f829 14204
+dist/dist-7YO5GWOM.js.map
+  h_e9fef506e0f829 1
+dist/dist-FYR7GDHI.js
+  h_e9fef506e0f829 2110
+dist/dist-FYR7GDHI.js.map
+  h_e9fef506e0f829 1
+dist/dist-GVKRJ5MX.js
+  h_e9fef506e0f829 788
+dist/dist-GVKRJ5MX.js.map
+  h_e9fef506e0f829 1
+dist/dist-IHREMIZQ.js
+  h_e9fef506e0f829 1911
+dist/dist-IHREMIZQ.js.map
+  h_e9fef506e0f829 1
+dist/dist-IYWL3O6W.js
+  h_e9fef506e0f829 1079-1101,1133-1139,1449
+dist/dist-IYWL3O6W.js.map
+  h_e9fef506e0f829 1
+dist/dist-JWY3FEXF.js
+  h_e9fef506e0f829 6330
+dist/dist-JWY3FEXF.js.map
+  h_e9fef506e0f829 1
+dist/dist-MEHYGRPN.js
+  h_e9fef506e0f829 1019
+dist/dist-MEHYGRPN.js.map
+  h_e9fef506e0f829 1
+dist/dist-MRTWOF2O.js
+  h_e9fef506e0f829 3187
+dist/dist-MRTWOF2O.js.map
+  h_e9fef506e0f829 1
+dist/dist-NGQCW5CM.js
+  h_e9fef506e0f829 4229
+dist/dist-NGQCW5CM.js.map
+  h_e9fef506e0f829 1
+dist/dist-QZCL3AHS.js
+  h_e9fef506e0f829 5090
+dist/dist-QZCL3AHS.js.map
+  h_e9fef506e0f829 1
+dist/dist-RDG5UJO3.js
+  h_e9fef506e0f829 11279-11288,11389-11451,11485-11486,11510,11518-11543,12574
+dist/dist-RDG5UJO3.js.map
+  h_e9fef506e0f829 1
+dist/dist-UFHJYTT3.js
+  h_e9fef506e0f829 2299
+dist/dist-UFHJYTT3.js.map
+  h_e9fef506e0f829 1
+dist/dist-VAJIQQHE.js
+  h_e9fef506e0f829 1685
+dist/dist-VAJIQQHE.js.map
+  h_e9fef506e0f829 1
+dist/index.js
+  h_e9fef506e0f829 17
+dist/project-worker.js
+  h_e9fef506e0f829 3
+package.json
+  h_e9fef506e0f829 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "546518c5071d42f817f467dfea408c139eb04f39",
+  "prompts": {},
+  "humans": {
+    "h_e9fef506e0f829": {
+      "author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
