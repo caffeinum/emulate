@@ -1,0 +1,47 @@
+packages/@emulators/slack/README.md
+  s_7f7bb4f6550518::t_27b4ff6034455f 92
+packages/@emulators/slack/src/routes/webhooks.ts
+  s_7f7bb4f6550518::t_6bb223869d1dde 3
+  s_7f7bb4f6550518::t_9832cd59815e1e 105-117
+packages/@emulators/slack/src/routes/chat.ts
+  s_7f7bb4f6550518::t_9cd0c3527b2560 3-9,187-197,203
+apps/web/content/docs/slack.mdx
+  s_7f7bb4f6550518::t_27b4ff6034455f 146-168
+  s_7f7bb4f6550518::t_149c640943bae6 169
+packages/@emulators/slack/src/routes/conversations.ts
+  s_7f7bb4f6550518::t_1b16a00d430762 861-875
+packages/@emulators/slack/src/routes/files.ts
+  s_7f7bb4f6550518::t_9cd0c3527b2560 2-8
+  s_7f7bb4f6550518::t_6bb223869d1dde 309-320,326
+packages/@emulators/slack/src/__tests__/slack-connect.test.ts
+  s_7f7bb4f6550518::t_64b67be1c5abd9 1-189
+packages/@emulators/slack/src/entities.ts
+  s_7f7bb4f6550518::t_daf73081ee12e0 75
+packages/@emulators/slack/src/events.ts
+  s_7f7bb4f6550518::t_9cd0c3527b2560 6,12,17-26,30-33,74-84
+  s_7f7bb4f6550518::t_9832cd59815e1e 27-29
+packages/@emulators/slack/src/index.ts
+  s_7f7bb4f6550518::t_daf73081ee12e0 35,39-43,45-46,55-56,61-62,246-248,259-269,275,288,309-317,322-323,330,332-333,392,421-432,615-622,631-632
+  s_7f7bb4f6550518::t_d8d2d61e2422a9 623-630
+  s_7f7bb4f6550518::t_a267ba0087eeae 633
+README.md
+  s_7f7bb4f6550518::t_27b4ff6034455f 998
+skills/slack/SKILL.md
+  s_7f7bb4f6550518::t_27b4ff6034455f 206-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1871dc89ee6050155c6eab24963744e9bc80fff1",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}

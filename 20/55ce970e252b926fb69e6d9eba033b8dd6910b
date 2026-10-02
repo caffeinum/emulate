@@ -1,0 +1,33 @@
+apps/web/app/docs/telegram/page.mdx
+  s_7f7bb4f6550518::t_64cc67a7b61864 48
+THIRD_PARTY_NOTICES.md
+  s_7f7bb4f6550518::t_64cc67a7b61864 45-47
+packages/@emulators/telegram/README.md
+  s_7f7bb4f6550518::t_64cc67a7b61864 48
+README.md
+  s_7f7bb4f6550518::t_64cc67a7b61864 1222
+packages/@emulators/telegram/package.json
+  s_7f7bb4f6550518::t_7aeb85731b56f5 42
+skills/telegram/SKILL.md
+  s_7f7bb4f6550518::t_64cc67a7b61864 54
+packages/@emulators/telegram/src/__tests__/telegram.test.ts
+  s_7f7bb4f6550518::t_75387795945483 262-280,283-290,292-294,296-311
+pnpm-lock.yaml
+  s_7f7bb4f6550518::t_4cbef5977a563d 806-807,10481-10483,22643
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2055ce970e252b926fb69e6d9eba033b8dd6910b",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}

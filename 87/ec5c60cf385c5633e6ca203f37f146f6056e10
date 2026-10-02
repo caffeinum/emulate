@@ -1,0 +1,19 @@
+scripts/publish-dist-branch.sh
+  s_7f7bb4f6550518::t_97a645cf92bbfa 8,17-23,27,29,75,77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "87ec5c60cf385c5633e6ca203f37f146f6056e10",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
