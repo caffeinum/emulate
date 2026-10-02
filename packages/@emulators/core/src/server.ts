@@ -53,6 +53,7 @@ export function createServer(plugin: ServicePlugin, options: ServerOptions = {})
   let lastPruneAt = Math.floor(Date.now() / 1000);
 
   app.use("*", async (c, next) => {
+    if (plugin.rateLimit === false) return next();
     const token = c.get("authToken") ?? "__anonymous__";
     const now = Math.floor(Date.now() / 1000);
 
@@ -89,7 +90,10 @@ export function createServer(plugin: ServicePlugin, options: ServerOptions = {})
     await next();
   });
 
-  plugin.register(app, store, webhooks, baseUrl, tokenMap);
+  const dispose = plugin.register(app, store, webhooks, baseUrl, tokenMap);
+  const close = async () => {
+    if (dispose) await dispose();
+  };
 
   app.notFound((c) =>
     c.json(
@@ -101,5 +105,5 @@ export function createServer(plugin: ServicePlugin, options: ServerOptions = {})
     ),
   );
 
-  return { app, store, webhooks, port, baseUrl, tokenMap };
+  return { app, store, webhooks, port, baseUrl, tokenMap, close };
 }
