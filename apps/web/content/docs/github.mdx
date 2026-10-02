@@ -53,7 +53,7 @@ The destination must not exist. emulate removes inherited ACLs, verifies effecti
 
 ## OAuth device flow
 
-`POST /login/device/code` (`client_id`, `scope`) returns `device_code`, `user_code`, `verification_uri`, `expires_in`, and `interval`, form-encoded unless `Accept: application/json`. Open `verification_uri?user_code=XXXX-XXXX` and pick a seeded user to approve it (tests can `POST /login/device` with `user_code` and `login`). Polling `POST /login/oauth/access_token` with `grant_type=urn:ietf:params:oauth:grant-type:device_code`, `device_code`, and `client_id` answers `authorization_pending` until then, and needs no client secret. The token endpoint also accepts client credentials as HTTP Basic auth.
+`POST /login/device/code` (`client_id`, `scope`) returns `device_code`, `user_code`, `verification_uri`, `expires_in`, and `interval`, form-encoded unless `Accept: application/json`. Open `verification_uri?user_code=XXXX-XXXX` and pick a seeded user to approve it (tests can `POST /login/device` with `user_code` and `login`). Polling `POST /login/oauth/access_token` with `grant_type=urn:ietf:params:oauth:grant-type:device_code`, `device_code`, and `client_id` answers `authorization_pending` until then, and needs no client secret. When `oauth_apps` are seeded, the device flow's `client_id` must be one of them, as for every OAuth client. The token endpoint also accepts client credentials as HTTP Basic auth.
 
 ## Seed Config
 
