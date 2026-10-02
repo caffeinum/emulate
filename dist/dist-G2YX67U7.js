@@ -5,7 +5,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_0c969006d089bddb08165d1b401b642c/node_modules/telegram-bot-test-server/src/owner.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/owner.js
 var MUTE_FOREVER = 2147483647;
 var CHANNEL_PEER_OFFSET = 1e12;
 var KINDS = /* @__PURE__ */ new Set(["private", "bot", "group", "supergroup", "channel"]);
@@ -961,7 +961,7 @@ function camel(name) {
   return name.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase());
 }
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_0c969006d089bddb08165d1b401b642c/node_modules/telegram-bot-test-server/src/formatting.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/formatting.js
 var FormattingError = class extends Error {
 };
 var utf8Length = (text) => Buffer.byteLength(text, "utf8");
@@ -1419,7 +1419,7 @@ function formatText(text, { parseMode, entities, detect }) {
   };
 }
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_0c969006d089bddb08165d1b401b642c/node_modules/telegram-bot-test-server/src/index.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/index.js
 import http from "http";
 import {
   createHash,
@@ -1429,7 +1429,7 @@ import {
   timingSafeEqual
 } from "crypto";
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_0c969006d089bddb08165d1b401b642c/node_modules/telegram-bot-test-server/src/owner-client.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/owner-client.js
 var ownerApi = Object.freeze({
   messages: Object.freeze({
     GetDialogFilters: class GetDialogFilters {
@@ -1441,7 +1441,7 @@ var ownerApi = Object.freeze({
   })
 });
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_0c969006d089bddb08165d1b401b642c/node_modules/telegram-bot-test-server/src/index.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/index.js
 var PERMISSION_KEYS = Object.freeze([
   "can_send_messages",
   "can_send_audios",
@@ -1700,9 +1700,8 @@ async function readRequestParams(request, body) {
 async function uploadedFile(file) {
   const bytes = Buffer.from(await file.arrayBuffer());
   if (file.name) bytes.fileName = file.name;
-  if (file.type && file.type !== "application/octet-stream") {
-    bytes.mimeType = file.type;
-  }
+  const type = file.type.split(";")[0].trim().toLowerCase();
+  if (type && type !== "application/octet-stream") bytes.mimeType = type;
   return bytes;
 }
 var MIME_TYPES = {
@@ -6304,4 +6303,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-AJA26OP5.js.map
+//# sourceMappingURL=dist-G2YX67U7.js.map
