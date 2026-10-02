@@ -14,7 +14,7 @@ import {
   registerAliases,
   removeAliases,
   resolveEnv
-} from "./chunk-MALWIZCK.js";
+} from "./chunk-PA2K5Z3A.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
@@ -877,7 +877,7 @@ program.command("start", { isDefault: true }).description("Start the emulator se
     process.exit(1);
   }
 });
-program.command("run").description("Start the configured emulators, run a command with the config's env, then stop them").argument("<command...>", "Command to run, e.g. pnpm dev").option("-p, --port <port>", "Base port; 0 picks a free port per service", process.env.EMULATE_PORT ?? "4000").option("-s, --service <services>", "Comma-separated services to enable").option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration").option("--portless", "Serve over HTTPS via portless (auto-registers aliases)").passThroughOptions().action(async (command, opts) => {
+program.command("run").description("Start the configured emulators, run a command with the config's env, then stop them").argument("<command...>", "Command to run, e.g. pnpm dev").option("-p, --port <port>", "Base port; 0 picks a free port per service", process.env.EMULATE_PORT ?? "4000").option("-s, --service <services>", "Comma-separated services to enable").option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration").option("--portless", "Serve over HTTPS via portless (auto-registers aliases)").option("--scenario <name>", "Overlay scenarios.<name> from the config").passThroughOptions().action(async (command, opts) => {
   try {
     process.exitCode = await runCommand({ ...opts, port: Number(opts.port) }, command);
   } catch (error) {

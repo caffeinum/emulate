@@ -2969,6 +2969,7 @@ async function loadConfig(options = {}, onDependenciesChange) {
       } else raw = await loader.load(path);
       if (!isRecord(raw)) throw new Error(`${path} must export a configuration object`);
     }
+    raw = applyScenario(raw, options.scenario);
     const unknown = Object.keys(raw).filter(
       (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env", "prepare", "cleanup"].includes(key)
     );
@@ -3059,6 +3060,22 @@ async function loadConfig(options = {}, onDependenciesChange) {
     loader.close();
     throw error;
   }
+}
+function applyScenario(raw, name) {
+  const { scenarios, ...base } = raw;
+  if (!name) return base;
+  const overlay = isRecord(scenarios) ? scenarios[name] : void 0;
+  if (!isRecord(overlay)) {
+    throw new Error(
+      `Unknown scenario ${name}. Defined: ${isRecord(scenarios) ? Object.keys(scenarios).join(", ") : "none"}`
+    );
+  }
+  return Object.fromEntries(
+    [.../* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(overlay)])].map((key) => [
+      key,
+      isRecord(base[key]) && isRecord(overlay[key]) ? { ...base[key], ...overlay[key] } : overlay[key] ?? base[key]
+    ])
+  );
 }
 
 // src/commands/start.ts
@@ -3664,4 +3681,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-MALWIZCK.js.map
+//# sourceMappingURL=chunk-PA2K5Z3A.js.map
