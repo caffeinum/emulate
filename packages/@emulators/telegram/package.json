@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@emulators/core": "workspace:*",
-    "telegram-bot-test-server": "github:caffeinum/telegram-bot-test-server#2e1fc7957dd0104d5e67774508aa9a2830dca6d6"
+    "telegram-bot-test-server": "github:caffeinum/telegram-bot-test-server#ec5b304d21e238f3aae79ab806da858d54f61fb9"
   },
   "devDependencies": {
     "grammy": "^1.46.0",
