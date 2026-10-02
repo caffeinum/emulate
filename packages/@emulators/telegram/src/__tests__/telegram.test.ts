@@ -253,6 +253,14 @@ describe("telegram emulator", () => {
     expect(await emu.control("GET", "users/alice/messages")).toEqual([]);
   });
 
+  it("lists the control routes for an unknown control path", async () => {
+    const response = await fetch(`${emu.url}/_telegram/users/developer/buttons`, { method: "POST", body: "{}" });
+    expect(response.status).toBe(404);
+    const body = (await response.json()) as { error: string; routes: string[] };
+    expect(body.error).toBe("no control route POST /_telegram/users/developer/buttons");
+    expect(body.routes).toContain("POST /_telegram/users/:user/messages/:message/buttons");
+  });
+
   it("rejects seed references to unknown users", async () => {
     await expect(
       startTelegramEmulator({ chats: [{ name: "x", owner: "nobody" }] }).then((bad) => bad.control("GET", "ids")),
