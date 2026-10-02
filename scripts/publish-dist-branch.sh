@@ -76,4 +76,8 @@ git -C "$WORKTREE" commit --quiet -m "dist: emulate $(node -p 'require("./packag
 
 source: $SOURCE_BRANCH@$SOURCE_SHA"
 git -C "$WORKTREE" push --quiet "$REMOTE" "$BRANCH"
+# main is rebased onto upstream on every sync; the tag keeps this source reachable.
+SOURCE_TAG="src-${SOURCE_SHA:0:7}"
+git tag -f "$SOURCE_TAG" "$SOURCE_SHA" >/dev/null
+git push --quiet "$REMOTE" "refs/tags/$SOURCE_TAG"
 echo "$(git -C "$WORKTREE" rev-parse HEAD) dist for $SOURCE_SHA"
