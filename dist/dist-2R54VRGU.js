@@ -5712,13 +5712,16 @@ var ADAPTER_METHODS = {
   })
 };
 var TELEGRAM_ADAPTER_METHODS = Object.freeze(Object.keys(ADAPTER_METHODS));
-function botApiRoutes(app, runtime) {
+function botApiRoutes(app, runtime, controlRoutes2) {
   for (const httpMethod of ["GET", "POST"]) {
     app.on(httpMethod, "/*", async (c, next) => {
       const path = new URL(c.req.url).pathname;
       const method = BOT_METHOD_PATH.exec(path);
       if (method) return handleBotMethod(c, runtime, decodeURIComponent(method[1]), method[2]);
       if (FILE_PATH.test(path)) return proxy(c, await runtime.world(), path);
+      if (path.startsWith("/_telegram/")) {
+        return c.json({ error: `no control route ${httpMethod} ${path}`, routes: controlRoutes2 }, 404);
+      }
       return next();
     });
   }
@@ -5889,11 +5892,20 @@ function controlRoutes(app, runtime) {
       throw error;
     }
   };
-  app.get(
+  const routes = [];
+  const get = (path, handler) => {
+    routes.push(`GET ${path}`);
+    app.get(path, handler);
+  };
+  const post = (path, handler) => {
+    routes.push(`POST ${path}`);
+    app.post(path, handler);
+  };
+  get(
     "/_telegram/ids",
     route(async (world) => world.ids)
   );
-  app.post(
+  post(
     "/_telegram/users",
     route(async (world, _c, body) => {
       const name = requireString2(body, "name");
@@ -5909,7 +5921,7 @@ function controlRoutes(app, runtime) {
       return { id };
     })
   );
-  app.post(
+  post(
     "/_telegram/chats/:chat/topics",
     route(async (world, c, body) => {
       const chatId = chatRef(world, c.req.param("chat"));
@@ -5921,14 +5933,14 @@ function controlRoutes(app, runtime) {
       return { message_thread_id: threadId };
     })
   );
-  app.post(
+  post(
     "/_telegram/chats/:chat/members",
     route(async (world, c, body) => {
       await world.backend.join(chatRef(world, c.req.param("chat")), userRef(world, body.user));
       return { ok: true };
     })
   );
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages",
     route(async (world, c, body) => {
       const chatId = chatRef(world, c.req.param("chat"));
@@ -5936,11 +5948,11 @@ function controlRoutes(app, runtime) {
       return { message_id: messageId };
     })
   );
-  app.get(
+  get(
     "/_telegram/chats/:chat/messages",
     route(async (world, c) => world.backend.getMessages(chatRef(world, c.req.param("chat"))))
   );
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages/:message/edit",
     route(async (world, c, body) => {
       await world.backend.editMessage(
@@ -5952,7 +5964,7 @@ function controlRoutes(app, runtime) {
       return { ok: true };
     })
   );
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages/:message/reactions",
     route(async (world, c, body) => {
       const emoji = body.emoji === null ? null : requireString2(body, "emoji");
@@ -5965,7 +5977,7 @@ function controlRoutes(app, runtime) {
       return { ok: true };
     })
   );
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages/:message/buttons",
     route(
       async (world, c, body) => world.backend.pressButton(
@@ -5976,7 +5988,7 @@ function controlRoutes(app, runtime) {
       )
     )
   );
-  app.post(
+  post(
     "/_telegram/users/:user/messages",
     route(async (world, c, body) => ({
       message_id: await world.backend.sendDirectMessage(
@@ -5985,11 +5997,11 @@ function controlRoutes(app, runtime) {
       )
     }))
   );
-  app.get(
+  get(
     "/_telegram/users/:user/messages",
     route(async (world, c) => world.backend.getDirectMessages(userRef(world, c.req.param("user"))))
   );
-  app.post(
+  post(
     "/_telegram/users/:user/messages/:message/buttons",
     route(
       async (world, c, body) => world.backend.pressDirectButton(
@@ -5999,7 +6011,7 @@ function controlRoutes(app, runtime) {
       )
     )
   );
-  app.get(
+  get(
     "/_telegram/calls",
     route(async (world) => {
       const { calls, unimplemented } = await world.backend.getCalls();
@@ -6009,6 +6021,7 @@ function controlRoutes(app, runtime) {
       };
     })
   );
+  return routes;
 }
 async function readJson(c) {
   const text = await c.req.text();
@@ -6276,8 +6289,7 @@ function createTelegramPlugin(createBackend = createTestServerBackend) {
           )
         );
       });
-      controlRoutes(app, runtime);
-      botApiRoutes(app, runtime);
+      botApiRoutes(app, runtime, controlRoutes(app, runtime));
       return () => runtime.close();
     },
     seed(store) {
@@ -6303,4 +6315,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-Y3YFGOKZ.js.map
+//# sourceMappingURL=dist-2R54VRGU.js.map
