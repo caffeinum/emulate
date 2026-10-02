@@ -45,7 +45,7 @@ Configured `bots` replace the default bot; `users` and `chats` add to the defaul
 
 ## Bot API
 
-Everything telegram-bot-test-server implements, including getMe, getUpdates (long poll with `timeout`, `offset`, `allowed_updates`), setWebhook / deleteWebhook / getWebhookInfo (`secret_token` sent as `X-Telegram-Bot-Api-Secret-Token`, `drop_pending_updates`, `allowed_updates`; getUpdates answers 409 while a webhook is set), sendMessage, editMessageText, editMessageCaption, deleteMessage, sendChatAction, setMessageReaction, answerCallbackQuery, sendPhoto, sendVoice, sendDocument, sendMediaGroup, getFile with downloads at `/file/bot<token>/<file_path>`, getChat, members and permissions, and set/get/deleteMyCommands. Uploads work as multipart fields or as `attach://<part>` references.
+Everything telegram-bot-test-server implements, including getMe, getUpdates (long poll with `timeout`, `offset`, `allowed_updates`), setWebhook / deleteWebhook / getWebhookInfo (`secret_token` sent as `X-Telegram-Bot-Api-Secret-Token`, `drop_pending_updates`, `allowed_updates`; getUpdates answers 409 while a webhook is set), sendMessage, editMessageText, editMessageCaption, deleteMessage, sendChatAction, setMessageReaction, answerCallbackQuery, sendPhoto, sendVoice, sendDocument, sendMediaGroup, getFile with downloads at `/file/bot<token>/<file_path>`, getChat, members and permissions, and set/get/deleteMyCommands. Uploads work as multipart fields or as `attach://<part>` references. `parse_mode` (HTML, MarkdownV2, Markdown) and explicit entities become text plus entities, `reply_parameters` / `reply_to_message_id` set `reply_to_message`, and uploaded documents keep their file name and type.
 
 The adapter adds forum topic management and bot profile text: createForumTopic, editForumTopic, getForumTopicIconStickers, setMyDescription, getMyDescription, setMyShortDescription, and getMyShortDescription. Descriptions are stored per `language_code` and fall back to the default language.
 
@@ -73,6 +73,5 @@ Each action resolves after the update reached the bot's webhook or getUpdates qu
 ## Current Limits
 
 - Webhook deliveries go straight from the backend to the bot, so they do not appear in emulate's webhook delivery log.
-- Bot sends ignore `reply_parameters`, `parse_mode` is not applied (text keeps its markup and gets no entities), and uploaded documents lose `file_name`. These follow telegram-bot-test-server 0.9.0.
 - createForumTopic and editForumTopic post the service message as the chat's owner, so bots in the chat (including the caller) receive it as an update.
 - Ids for users, chats, and topics are assigned at startup rather than taken from the seed.
