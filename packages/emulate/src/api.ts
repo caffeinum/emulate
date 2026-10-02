@@ -230,7 +230,7 @@ async function createBuiltinEmulator(options: EmulatorOptions): Promise<Emulator
         seed();
       },
       close(): Promise<void> {
-        return (closing ??= Promise.all([closePlugin(), closeHttpServer(httpServer)]).then(() => undefined));
+        return (closing ??= closePlugin().then(() => closeHttpServer(httpServer)));
       },
     };
   } catch (error) {
