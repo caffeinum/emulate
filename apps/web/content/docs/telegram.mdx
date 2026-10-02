@@ -30,6 +30,9 @@ telegram:
       username: my_bot
       first_name: My Bot
       description: Shown by getMyDescription
+      webhook:                # optional: deliver updates here from startup, no setWebhook call needed
+        url: http://localhost:3000/api/telegram-webhook
+        secret_token: local-secret
   users:
     - name: alice
       first_name: Alice
@@ -44,7 +47,7 @@ telegram:
       topics: [ideas]
 ```
 
-Configured `bots` replace the default bot; `users` and `chats` add to the defaults. Bot ids come from the token prefix. User, chat, and topic ids are assigned at startup; read them from `GET /_telegram/ids`. Seeding adds bots to chats, and the resulting `my_chat_member` updates are drained so every bot starts with an empty update queue.
+A bot's `webhook` is registered at startup and after every reset, sending `X-Telegram-Bot-Api-Secret-Token` when `secret_token` is set; the app can still change it with setWebhook or deleteWebhook. Configured `bots` replace the default bot; `users` and `chats` add to the defaults. Bot ids come from the token prefix. User, chat, and topic ids are assigned at startup; read them from `GET /_telegram/ids`. Seeding adds bots to chats, and the resulting `my_chat_member` updates are drained so every bot starts with an empty update queue.
 
 ## Bot API
 
