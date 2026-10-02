@@ -1,0 +1,43 @@
+packages/emulate/src/__tests__/run-command.test.ts
+  s_7f7bb4f6550518::t_b5278e44be54f5 1-126
+README.md
+  s_7f7bb4f6550518::t_497d2d908a6959 106-108
+  s_7f7bb4f6550518::t_aaa16b884ab407 138-163
+packages/emulate/src/commands/run.ts
+  s_7f7bb4f6550518::t_7687d05dcea277 1-61
+packages/emulate/src/index.ts
+  s_7f7bb4f6550518::t_7687d05dcea277 7,15-24,164-194
+packages/emulate/src/env-template.ts
+  s_7f7bb4f6550518::t_383d5e942f2f54 1-77
+skills/emulate/SKILL.md
+  s_7f7bb4f6550518::t_497d2d908a6959 51-53,527
+  s_7f7bb4f6550518::t_aaa16b884ab407 87-112
+packages/emulate/src/project-runner.ts
+  s_7f7bb4f6550518::t_7687d05dcea277 214-215
+  s_7f7bb4f6550518::t_3cec17a863634e 32-40,69,90,92,123-129,161,206-213,216-225
+  s_7f7bb4f6550518::t_fd16f12e848f5a 112-113
+  s_7f7bb4f6550518::t_24081b1a117591 226-227
+apps/web/content/docs/configuration.mdx
+  s_7f7bb4f6550518::t_aaa16b884ab407 23-48
+packages/emulate/src/config-loader.ts
+  s_7f7bb4f6550518::t_7687d05dcea277 73-75
+  s_7f7bb4f6550518::t_3cec17a863634e 8,44,94,164
+packages/emulate/src/config.ts
+  s_7f7bb4f6550518::t_3cec17a863634e 16-17,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5b79af873ac304e47aba09cf20dd5896b640a206",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
