@@ -209,13 +209,13 @@ Slack event callbacks:
     .command("run")
     .description("Start the configured emulators, run a command with the config's env, then stop them")
     .argument("<command...>", "Command to run, e.g. pnpm dev")
-    .option("-p, --port <port>", "Base port", defaultPort)
+    .option("-p, --port <port>", "Base port; 0 picks a free port per service", process.env.EMULATE_PORT ?? "4000")
     .option("-s, --service <services>", "Comma-separated services to enable")
     .option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration")
     .option("--portless", "Serve over HTTPS via portless (auto-registers aliases)")
     .passThroughOptions()
     .action(async (command: string[], opts) => {
-      process.exitCode = await runCommand({ ...opts, port: parsePort(opts.port) }, command);
+      process.exitCode = await runCommand({ ...opts, port: Number(opts.port) }, command);
     });
 
   program

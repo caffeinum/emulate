@@ -6,6 +6,7 @@ import {
   type PersistenceAdapter,
 } from "@emulators/core";
 import type { Server } from "node:http";
+import { createServer as createNetServer, type AddressInfo } from "node:net";
 import { loadConfig, type LoadedConfig } from "./config-loader.js";
 import {
   prepareStartServices,
@@ -31,6 +32,7 @@ export interface RetainedSeed {
 export interface RunMetadata {
   services: Array<{ name: string; url: string; port: number; source: string; inspectorUrl?: string; seed?: unknown }>;
   env: Record<string, string>;
+  prepare?: string;
   dependencies: string[];
   directory: string;
   watch: string[];
@@ -62,6 +64,7 @@ export async function prepareProject(
     secrets: [],
     retained: {},
     env: config.env,
+    prepare: config.prepare,
   };
   let closed = false;
   let closing: Promise<void> | undefined;
@@ -87,8 +90,12 @@ export async function prepareProject(
   try {
     signal?.throwIfAborted();
     const ports = new Set<number>();
+    // Base port 0 gives each service its own free port.
+    const servicePorts = await Promise.all(
+      config.services.map((service, index) => service.port ?? (options.port === 0 ? freePort() : options.port + index)),
+    );
     for (const [index, service] of config.services.entries()) {
-      const port = service.port ?? options.port + index;
+      const port = servicePorts[index]!;
       if (!Number.isInteger(port) || port < 1 || port > 65535)
         throw new Error(`Invalid port for ${service.name}: ${port}`);
       if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
@@ -96,7 +103,7 @@ export async function prepareProject(
     }
     for (const [index, service] of config.services.entries()) {
       signal?.throwIfAborted();
-      const port = service.port ?? options.port + index;
+      const port = servicePorts[index]!;
       const baseUrl = resolveBaseUrl({
         service: service.name,
         port,
@@ -260,4 +267,14 @@ function toTokens(config: LoadedConfig): Record<string, { login: string; id: num
   return Object.fromEntries(
     Object.entries(config.tokens).map(([token, user], index) => [token, { ...user, id: index + 100 }]),
   );
+}
+
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createNetServer().listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as AddressInfo;
+      server.close(() => resolve(port));
+    });
+    server.once("error", reject);
+  });
 }

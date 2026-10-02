@@ -17,19 +17,24 @@ export async function runCommand(options: ProjectOptions, command: string[]): Pr
     registerAliases(aliases);
     await run.start();
     console.error(`emulate: ${run.metadata.services.map((s) => `${s.name} ${s.url}`).join(", ")}`);
-    const outside = Object.fromEntries(
-      PASSTHROUGH.flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : [])),
-    );
-    return await runChild(command, { ...outside, ...env });
+    const outside = PASSTHROUGH.flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : []));
+    const childEnv = { ...Object.fromEntries(outside), ...env };
+    const { prepare } = run.metadata;
+    const prepared = prepare ? await runChild(prepare, childEnv) : 0;
+    if (prepared !== 0) throw new Error(`prepare exited with ${prepared}: ${prepare}`);
+    return await runChild(command, childEnv);
   } finally {
     await run.close().catch(console.error);
     removeAliases(aliases);
   }
 }
 
-function runChild([file, ...args]: string[], env: Record<string, string>): Promise<number> {
+/** An argv array runs directly; a string (the config's prepare) runs in a shell. */
+function runChild(command: string[] | string, env: Record<string, string>): Promise<number> {
+  const [file, ...args] = typeof command === "string" ? [command] : command;
   return new Promise((resolveExit, reject) => {
-    const child = spawn(file!, args, { stdio: "inherit", env, shell: process.platform === "win32" });
+    const shell = typeof command === "string" || process.platform === "win32";
+    const child = spawn(file!, args, { stdio: "inherit", env, shell });
     const forward = (signal: NodeJS.Signals) => child.kill(signal);
     process.on("SIGINT", forward).on("SIGTERM", forward);
     const done = () => process.off("SIGINT", forward).off("SIGTERM", forward);
