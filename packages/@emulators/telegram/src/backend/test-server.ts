@@ -1,6 +1,6 @@
 import { startTestServer } from "telegram-bot-test-server";
 import { TelegramBackendError } from "./types.js";
-import type { TelegramBackend, TelegramBackendFactory, TelegramMessage } from "./types.js";
+import type { TelegramBackend, TelegramBackendFactory, TelegramMessage, TelegramPostedMessage } from "./types.js";
 
 /** The only module that talks to telegram-bot-test-server. */
 export const createTestServerBackend: TelegramBackendFactory = async (primaryBot) => {
@@ -46,25 +46,8 @@ export const createTestServerBackend: TelegramBackendFactory = async (primaryBot
       if (!creator) throw new Error(`telegram chat ${chatId} has no creator`);
       return creator.user_id;
     },
-    post: (chatId, userId, message) =>
-      server.post(chatId, userId, {
-        text: message.text,
-        caption: message.caption,
-        replyTo: message.reply_to,
-        threadId: message.thread_id,
-        ...(message.media?.type === "photo" ? { photo: message.media.bytes } : {}),
-        ...(message.media && message.media.type !== "photo"
-          ? {
-              media: {
-                type: message.media.type,
-                bytes: message.media.bytes,
-                fileName: message.media.file_name,
-                mimeType: message.media.mime_type,
-              },
-            }
-          : {}),
-      }),
-    sendDirectMessage: (userId, text) => server.sendDirectMessage(userId, text),
+    post: (chatId, userId, message) => server.post(chatId, userId, postedMessage(message)),
+    sendDirectMessage: (userId, message) => server.sendDirectMessage(userId, postedMessage(message)),
     async editMessage(chatId, messageId, userId, edit) {
       await server.editMessage(chatId, messageId, userId, edit);
     },
@@ -80,6 +63,20 @@ export const createTestServerBackend: TelegramBackendFactory = async (primaryBot
   };
   return refusalsAsBackendErrors(backend);
 };
+
+function postedMessage(message: TelegramPostedMessage) {
+  const { media } = message;
+  return {
+    text: message.text,
+    caption: message.caption,
+    replyTo: message.reply_to,
+    threadId: message.thread_id,
+    ...(media?.type === "photo" ? { photo: media.bytes } : {}),
+    ...(media && media.type !== "photo"
+      ? { media: { type: media.type, bytes: media.bytes, fileName: media.file_name, mimeType: media.mime_type } }
+      : {}),
+  };
+}
 
 /** The test server rejects control calls with plain Errors; tag them so routes can answer 400. */
 function refusalsAsBackendErrors(backend: TelegramBackend): TelegramBackend {

@@ -82,7 +82,7 @@ export interface TelegramBackend {
   listTopics(chatId: number): Promise<Array<{ message_thread_id: number; name: string }>>;
   chatOwner(chatId: number): Promise<number>;
   post(chatId: number, userId: number, message: TelegramPostedMessage): Promise<number>;
-  sendDirectMessage(userId: number, text: string): Promise<number>;
+  sendDirectMessage(userId: number, message: TelegramPostedMessage): Promise<number>;
   editMessage(
     chatId: number,
     messageId: number,

@@ -153,7 +153,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): stri
     route(async (world, c, body) => ({
       message_id: await world.backend.sendDirectMessage(
         userRef(world, c.req.param("user")),
-        requireString(body, "text"),
+        postedMessage(world, undefined, body),
       ),
     })),
   );
@@ -198,7 +198,7 @@ async function readJson(c: Context): Promise<Body> {
   return body as Body;
 }
 
-function postedMessage(world: TelegramWorld, chatId: number, body: Body): TelegramPostedMessage {
+function postedMessage(world: TelegramWorld, chatId: number | undefined, body: Body): TelegramPostedMessage {
   const media = body.media === undefined ? undefined : mediaRef(body.media);
   const text = optionalString(body, "text");
   if (text === undefined && !media) throw new ControlError(400, "message needs text or media");
@@ -206,7 +206,7 @@ function postedMessage(world: TelegramWorld, chatId: number, body: Body): Telegr
     text,
     caption: optionalString(body, "caption"),
     reply_to: body.reply_to === undefined ? undefined : integer(body.reply_to, "reply_to"),
-    thread_id: threadRef(world, chatId, body.topic),
+    thread_id: chatId === undefined ? undefined : threadRef(world, chatId, body.topic),
     media,
   };
 }

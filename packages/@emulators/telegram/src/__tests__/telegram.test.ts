@@ -280,6 +280,23 @@ describe("telegram emulator", () => {
     }
   });
 
+  it("takes media in a user's direct message", async () => {
+    const bot = grammyBot();
+    const sent = await emu.control("POST", "users/alice/messages", {
+      caption: "listen",
+      media: { type: "voice", base64: Buffer.from("OggS").toString("base64"), mime_type: "audio/ogg" },
+    });
+    const [update] = await bot.api.getUpdates({ timeout: 0 });
+    expect(update?.message).toMatchObject({
+      message_id: sent.message_id,
+      chat: { id: ids.users.alice, type: "private" },
+      caption: "listen",
+      voice: { mime_type: "audio/ogg" },
+    });
+    const file = await bot.api.getFile(update!.message!.voice!.file_id);
+    expect(await (await fetch(`${emu.url}/file/bot${BOT_TOKEN}/${file.file_path}`)).text()).toBe("OggS");
+  });
+
   it("lists the control routes for an unknown control path", async () => {
     const response = await fetch(`${emu.url}/_telegram/users/developer/buttons`, { method: "POST", body: "{}" });
     expect(response.status).toBe(404);
