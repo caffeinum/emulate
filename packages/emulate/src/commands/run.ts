@@ -19,17 +19,22 @@ export async function runCommand(options: ProjectOptions, command: string[]): Pr
     console.error(`emulate: ${run.metadata.services.map((s) => `${s.name} ${s.url}`).join(", ")}`);
     const outside = PASSTHROUGH.flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : []));
     const childEnv = { ...Object.fromEntries(outside), ...env };
-    const { prepare } = run.metadata;
-    const prepared = prepare ? await runChild(prepare, childEnv) : 0;
-    if (prepared !== 0) throw new Error(`prepare exited with ${prepared}: ${prepare}`);
-    return await runChild(command, childEnv);
+    const { prepare, cleanup } = run.metadata;
+    try {
+      const prepared = prepare ? await runChild(prepare, childEnv) : 0;
+      if (prepared !== 0) throw new Error(`prepare exited with ${prepared}: ${prepare}`);
+      return await runChild(command, childEnv);
+    } finally {
+      const cleaned = cleanup ? await runChild(cleanup, childEnv).catch(() => 1) : 0;
+      if (cleaned !== 0) console.error(`emulate: cleanup exited with ${cleaned}: ${cleanup}`);
+    }
   } finally {
     await run.close().catch(console.error);
     removeAliases(aliases);
   }
 }
 
-/** An argv array runs directly; a string (the config's prepare) runs in a shell. */
+/** An argv array runs directly; a string (a config hook) runs in a shell. */
 function runChild(command: string[] | string, env: Record<string, string>): Promise<number> {
   const [file, ...args] = typeof command === "string" ? [command] : command;
   return new Promise((resolveExit, reject) => {
