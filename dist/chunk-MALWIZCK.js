@@ -27,7 +27,7 @@ var SERVICE_REGISTRY = {
     label: "Vercel REST API emulator",
     endpoints: "projects, deployments, domains, env vars, users, teams, file uploads, protection bypass, blob storage",
     async load() {
-      const mod = await import("./dist-TDYEHKI2.js");
+      const mod = await import("./dist-MRTWOF2O.js");
       return { plugin: mod.vercelPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -54,7 +54,7 @@ var SERVICE_REGISTRY = {
     label: "GitHub REST API emulator",
     endpoints: "users, repos, issues, PRs, comments, reviews, labels, milestones, branches, git data, orgs, teams, releases, webhooks, search, actions, checks, rate limit",
     async load() {
-      const mod = await import("./dist-7UAM2PMU.js");
+      const mod = await import("./dist-RDG5UJO3.js");
       return {
         plugin: mod.githubPlugin,
         seedFromConfig: mod.seedFromConfig,
@@ -118,7 +118,7 @@ var SERVICE_REGISTRY = {
     label: "Google OAuth 2.0 / OpenID Connect + Gmail, Calendar, and Drive emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, RS256 OIDC discovery and JWKS, token revocation, Gmail messages/drafts/threads/labels/history/settings, Calendar discovery/lists/events/freebusy, Drive files/uploads",
     async load() {
-      const mod = await import("./dist-CSAYDQIO.js");
+      const mod = await import("./dist-NGQCW5CM.js");
       return { plugin: mod.googlePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -200,7 +200,7 @@ var SERVICE_REGISTRY = {
     label: "Slack API emulator",
     endpoints: "auth, chat, conversations, users, profiles, presence, files, pins, bookmarks, views, reactions, team, OAuth, incoming webhooks, inspector",
     async load() {
-      const mod = await import("./dist-MR3R7P6U.js");
+      const mod = await import("./dist-QZCL3AHS.js");
       return { plugin: mod.slackPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -281,7 +281,7 @@ var SERVICE_REGISTRY = {
     label: "Apple Sign In / OAuth emulator",
     endpoints: "OAuth authorize, token exchange, JWKS",
     async load() {
-      const mod = await import("./dist-LZDZJ6NT.js");
+      const mod = await import("./dist-GVKRJ5MX.js");
       return { plugin: mod.applePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -306,7 +306,7 @@ var SERVICE_REGISTRY = {
     label: "Microsoft Entra ID OAuth 2.0 / OpenID Connect emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, OIDC discovery, Graph /me, logout, token revocation",
     async load() {
-      const mod = await import("./dist-XR557IF3.js");
+      const mod = await import("./dist-MEHYGRPN.js");
       return { plugin: mod.microsoftPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -331,7 +331,7 @@ var SERVICE_REGISTRY = {
     label: "Okta OAuth 2.0 / OpenID Connect + management API emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo/introspect/revoke/logout, users, groups, apps, authorization servers",
     async load() {
-      const mod = await import("./dist-WF35VR6L.js");
+      const mod = await import("./dist-FYR7GDHI.js");
       return { plugin: mod.oktaPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -359,7 +359,7 @@ var SERVICE_REGISTRY = {
     label: "AWS cloud service emulator",
     endpoints: "S3 (buckets, objects), SQS (queues, messages), IAM (users, roles, access keys), STS (assume role, caller identity)",
     async load() {
-      const mod = await import("./dist-TPU46F5J.js");
+      const mod = await import("./dist-VAJIQQHE.js");
       return { plugin: mod.awsPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -381,7 +381,7 @@ var SERVICE_REGISTRY = {
     label: "Resend email API emulator",
     endpoints: "emails with 24-hour Idempotency-Key replay, domains, contacts, API keys, inbox UI",
     async load() {
-      const mod = await import("./dist-BIXXNFKI.js");
+      const mod = await import("./dist-2NJAUFUP.js");
       return { plugin: mod.resendPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -398,7 +398,7 @@ var SERVICE_REGISTRY = {
     label: "Stripe payments emulator",
     endpoints: "customers, payment methods, customer sessions, payment intents, charges, products, prices, checkout sessions, webhooks",
     async load() {
-      const mod = await import("./dist-SNXHPNFU.js");
+      const mod = await import("./dist-IYWL3O6W.js");
       return { plugin: mod.stripePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -435,7 +435,7 @@ var SERVICE_REGISTRY = {
     label: "Clerk authentication and user management emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo, users, email addresses, organizations, memberships, invitations, sessions",
     async load() {
-      const mod = await import("./dist-EAAQMUXA.js");
+      const mod = await import("./dist-IHREMIZQ.js");
       return { plugin: mod.clerkPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -474,7 +474,7 @@ var SERVICE_REGISTRY = {
     label: "Linear GraphQL API emulator",
     endpoints: "GraphQL, OAuth, issues, teams, users, workflow states, comments, labels, projects, cycles, webhooks, agents, inspector",
     async load() {
-      const mod = await import("./dist-QHTJXXNG.js");
+      const mod = await import("./dist-7YO5GWOM.js");
       return { plugin: mod.linearPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -539,7 +539,7 @@ var SERVICE_REGISTRY = {
     label: "Twilio API emulator",
     endpoints: "accounts, API keys, phone numbers, Programmable Messaging, Messaging Services, Verify, Voice, webhooks, simulator, inspector",
     async load() {
-      const mod = await import("./dist-N3LK2QRW.js");
+      const mod = await import("./dist-UFHJYTT3.js");
       return { plugin: mod.twilioPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -595,7 +595,7 @@ var SERVICE_REGISTRY = {
     label: "Telegram Bot API emulator",
     endpoints: "Bot API at /bot<token>/<method> (messages, media, files, webhooks, getUpdates, forum topics, commands, descriptions), control API, inspector",
     async load() {
-      const mod = await import("./dist-37S6MG7T.js");
+      const mod = await import("./dist-JWY3FEXF.js");
       return { plugin: mod.telegramPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -1589,6 +1589,30 @@ function createServer(plugin, options = {}) {
     }
     await next();
   });
+  const requests = [];
+  app.get("/_emulate/requests", (c) => c.json(requests));
+  app.delete("/_emulate/requests", (c) => {
+    requests.length = 0;
+    return c.body(null, 204);
+  });
+  const handle = app.fetch;
+  app.fetch = async (request) => {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/_emulate/")) return handle(request);
+    const textual = !/multipart|octet-stream/.test(request.headers.get("Content-Type") ?? "");
+    const body = request.body && textual ? (await request.clone().text()).slice(0, 1e4) : void 0;
+    const response = await handle(request);
+    requests.push({
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      method: request.method,
+      path: url.pathname,
+      query: url.search,
+      status: response.status,
+      ...body ? { body } : {}
+    });
+    if (requests.length > 1e3) requests.shift();
+    return response;
+  };
   const close = plugin.register(app, store, webhooks, baseUrl, tokenMap) ?? (async () => {
   });
   app.notFound(
@@ -3388,7 +3412,7 @@ function createPreparedServiceServer(preparedService, tokens) {
   const { entry, loadedSvc, svcSeedConfig, port, baseUrl } = preparedService;
   let cachedResolver = void 0;
   const appKeyResolver = loadedSvc.createAppKeyResolver ? (appId) => cachedResolver(appId) : void 0;
-  const fallbackUser = entry.defaultFallback(svcSeedConfig);
+  const fallbackUser = svcSeedConfig?.strict_tokens === true ? void 0 : entry.defaultFallback(svcSeedConfig);
   const server = createServer(loadedSvc.plugin, {
     port,
     baseUrl,
@@ -3640,4 +3664,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-3X4NXHUT.js.map
+//# sourceMappingURL=chunk-MALWIZCK.js.map

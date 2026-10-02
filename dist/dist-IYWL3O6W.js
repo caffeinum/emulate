@@ -1076,6 +1076,29 @@ function formatSession(s, baseUrl) {
 }
 function checkoutSessionRoutes({ app, store, webhooks, baseUrl }) {
   const ss = getStripeStore(store);
+  const inlinePrice = (data) => {
+    const productData = data.product_data;
+    if (typeof data.currency !== "string") return "Missing required param: currency.";
+    if (!data.product && !productData?.name) return "Missing required param: product or product_data[name].";
+    if (data.product && !ss.products.findOneBy("stripe_id", data.product))
+      return `No such product: '${data.product}'`;
+    const productId = data.product ?? ss.products.insert({
+      stripe_id: stripeId("prod"),
+      name: productData.name,
+      description: productData.description ?? null,
+      active: true,
+      metadata: productData.metadata ?? {}
+    }).stripe_id;
+    return ss.prices.insert({
+      stripe_id: stripeId("price"),
+      product_id: productId,
+      currency: data.currency.toLowerCase(),
+      unit_amount: data.unit_amount === void 0 ? null : Number(data.unit_amount),
+      type: data.recurring ? "recurring" : "one_time",
+      active: false,
+      metadata: {}
+    });
+  };
   app.post("/v1/checkout/sessions", async (c) => {
     const body = await parseStripeBody(c);
     if (!body.mode)
@@ -1106,6 +1129,13 @@ function checkoutSessionRoutes({ app, store, webhooks, baseUrl }) {
             void 0,
             `line_items[${i}]`
           );
+        }
+        if (li.price === void 0 && li.price_data && typeof li.price_data === "object") {
+          const inline = inlinePrice(li.price_data);
+          if (typeof inline === "string") {
+            return stripeError(c, 400, "invalid_request_error", inline, void 0, `line_items[${i}][price_data]`);
+          }
+          li.price = inline.stripe_id;
         }
         if (!li.price || typeof li.price !== "string") {
           return stripeError(
@@ -1416,4 +1446,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-SNXHPNFU.js.map
+//# sourceMappingURL=dist-IYWL3O6W.js.map
