@@ -42,6 +42,7 @@ export interface LoadedConfig {
   services: ResolvedService[];
   tokens?: EmulateConfig["tokens"];
   env: Record<string, string>;
+  prepare?: string;
   watch: string[];
   loader: ProjectLoader;
 }
@@ -71,7 +72,7 @@ export async function loadConfig(
       if (!isRecord(raw)) throw new Error(`${path} must export a configuration object`);
     }
     const unknown = Object.keys(raw).filter(
-      (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env"].includes(key),
+      (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env", "prepare"].includes(key),
     );
     if (unknown.length)
       throw new Error(`Unknown config key: ${unknown.join(", ")}. Register custom APIs under services.`);
@@ -92,6 +93,8 @@ export async function loadConfig(
     )
       throw new Error("tokens must map token strings to { login, scopes? }");
     const env = raw.env === undefined ? {} : validateEnvBlock(raw.env);
+    if (raw.prepare !== undefined && (typeof raw.prepare !== "string" || !raw.prepare.trim()))
+      throw new Error("prepare must be a shell command");
     const entries: Record<string, ServiceConfig> = { ...raw.services };
     for (const name of SERVICE_NAMES)
       if (Object.hasOwn(raw, name)) {
@@ -161,7 +164,7 @@ export async function loadConfig(
             : (persistence as PersistenceAdapter | undefined),
       });
     }
-    return { path, directory, services, tokens: raw.tokens, env, watch: raw.watch ?? [], loader };
+    return { path, directory, services, tokens: raw.tokens, env, prepare: raw.prepare, watch: raw.watch ?? [], loader };
   } catch (error) {
     loader.close();
     throw error;
