@@ -1,0 +1,27 @@
+dist/chunk-IHCYBRGF.js
+  s_261ece75063d3f::t_45b92fd74156ec 2549,2693,2751-2755,2763,2773-2775,2812,2816,2831,3595
+dist/chunk-IHCYBRGF.js.map
+  s_261ece75063d3f::t_6d900e69e7461c 1
+dist/index.js
+  s_261ece75063d3f::t_c27f38753081fa 17
+dist/project-worker.js
+  s_261ece75063d3f::t_a08ff40a9a3587 3
+package.json
+  s_261ece75063d3f::t_bcaf36bfffaba8 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e58c7e9d8a5273c10a64ab2b1b8e3495ed44eeb4",
+  "prompts": {},
+  "sessions": {
+    "s_261ece75063d3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e99f505b-5d6c-4040-95a4-8b8a71c9d447",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
