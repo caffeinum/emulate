@@ -80,8 +80,7 @@ export function createTelegramPlugin(createBackend: TelegramBackendFactory = cre
           ),
         );
       });
-      controlRoutes(app, runtime);
-      botApiRoutes(app, runtime);
+      botApiRoutes(app, runtime, controlRoutes(app, runtime));
 
       return () => runtime.close();
     },
