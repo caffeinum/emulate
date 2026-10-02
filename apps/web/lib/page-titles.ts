@@ -12,6 +12,7 @@ export const PAGE_TITLES: Record<string, string> = {
   linear: "Linear API",
   twilio: "Twilio API",
   telegram: "Telegram Bot API",
+  workos: "WorkOS API",
   apple: "Apple Sign In",
   microsoft: "Microsoft Entra ID",
   aws: "AWS",
