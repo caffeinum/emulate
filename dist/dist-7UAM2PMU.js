@@ -11399,6 +11399,16 @@ function oauthRoutes({ app, store, baseUrl, tokenMap }) {
       raw = Object.fromEntries(new URLSearchParams(rawText));
     }
     debug("github.oauth", `[OAuth token] parsed keys: ${Object.keys(raw).join(", ")}`);
+    const basic = /^Basic\s+(.+)$/i.exec(c.req.header("Authorization") ?? "");
+    if (basic && raw.client_id === void 0) {
+      const decoded = Buffer.from(basic[1], "base64").toString("utf8");
+      const separator = decoded.indexOf(":");
+      const formDecode = (value) => decodeURIComponent(value.replace(/\+/g, " "));
+      if (separator > 0) {
+        raw.client_id = formDecode(decoded.slice(0, separator));
+        raw.client_secret = formDecode(decoded.slice(separator + 1));
+      }
+    }
     const code = String(raw.code ?? "");
     const bodyClientId = String(raw.client_id ?? "");
     const bodyClientSecret = String(raw.client_secret ?? "").slice(0, 4) + "****";
@@ -12461,4 +12471,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-6HOJGGYL.js.map
+//# sourceMappingURL=dist-7UAM2PMU.js.map
