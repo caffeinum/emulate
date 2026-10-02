@@ -34,6 +34,7 @@ export interface RunMetadata {
   services: Array<{ name: string; url: string; port: number; source: string; inspectorUrl?: string; seed?: unknown }>;
   env: Record<string, string>;
   prepare?: string;
+  cleanup?: string;
   dependencies: string[];
   directory: string;
   watch: string[];
@@ -70,6 +71,7 @@ export async function prepareProject(
     retained: {},
     env: config.env,
     prepare: config.prepare,
+    cleanup: config.cleanup,
   };
   let closed = false;
   let closing: Promise<void> | undefined;

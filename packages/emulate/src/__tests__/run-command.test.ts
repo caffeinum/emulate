@@ -112,12 +112,22 @@ it("picks free ports with --port 0 and runs prepare before the command", async (
   });
 });
 
-it("stops before the command when prepare fails", async () => {
+it("stops before the command when prepare fails, and still cleans up", async () => {
   vi.spyOn(console, "error").mockImplementation(() => {});
-  await inProject("github: {}\nprepare: exit 3\n", async (dir) => {
+  await inProject("github: {}\nprepare: exit 3\ncleanup: touch cleaned\n", async (dir) => {
     await expect(runCommand({ port: 0 }, ["sh", "-c", `touch ${JSON.stringify(join(dir, "ran"))}`])).rejects.toThrow(
       "prepare exited with 3: exit 3",
     );
     await expect(readFile(join(dir, "ran"))).rejects.toThrow();
+    await readFile(join(dir, "cleaned"));
+  });
+});
+
+it("runs cleanup after the command with the same env", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const config = 'github: {}\ncleanup: echo "$GH" > cleaned\nenv:\n  GH: "{github.url}"\n';
+  await inProject(config, async (dir) => {
+    expect(await runCommand({ port: 0 }, ["sh", "-c", "exit 4"])).toBe(4);
+    expect((await readFile(join(dir, "cleaned"), "utf8")).trim()).toMatch(/^http:\/\/localhost:\d+$/);
   });
 });
