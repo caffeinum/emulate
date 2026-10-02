@@ -1,0 +1,21 @@
+packages/@emulators/github/src/routes/oauth.ts
+  s_7f7bb4f6550518::t_c923fec9e6b7bd 222-233
+packages/@emulators/github/src/__tests__/oauth-basic.test.ts
+  s_7f7bb4f6550518::t_67153fd2877d07 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c48bdb0c240036f31b0a6111b5153db99c1a1e3e",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
