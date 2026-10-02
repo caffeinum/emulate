@@ -1,0 +1,33 @@
+packages/@emulators/telegram/src/index.ts
+  s_7f7bb4f6550518::t_d5ab084712a2e8 28
+packages/@emulators/telegram/src/runtime.ts
+  s_7f7bb4f6550518::t_d5ab084712a2e8 11-18,225,266-277
+  s_7f7bb4f6550518::t_ec14cd5c1e1baa 278-279
+packages/@emulators/telegram/src/__tests__/telegram.test.ts
+  s_7f7bb4f6550518::t_d9d012b1323785 275-276
+  s_7f7bb4f6550518::t_d5ab084712a2e8 256-274,277-282
+README.md
+  s_7f7bb4f6550518::t_56fb1dbd1c3a8e 1204-1206,1221
+apps/web/content/docs/telegram.mdx
+  s_7f7bb4f6550518::t_83452ecbe83b5f 33-35,50
+packages/@emulators/telegram/README.md
+  s_7f7bb4f6550518::t_7cf19fc6a2817d 30-32,47
+skills/telegram/SKILL.md
+  s_7f7bb4f6550518::t_ab5cd938768094 36-38,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b4ec45817c02611be64053bfde89d9e28dcd8578",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
