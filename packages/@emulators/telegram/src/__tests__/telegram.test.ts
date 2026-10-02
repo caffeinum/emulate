@@ -253,6 +253,33 @@ describe("telegram emulator", () => {
     expect(await emu.control("GET", "users/alice/messages")).toEqual([]);
   });
 
+  it("delivers to a webhook registered in the seed from startup", async () => {
+    const receiver = await startWebhookReceiver();
+    const seeded = await startTelegramEmulator({
+      bots: [
+        {
+          token: BOT_TOKEN,
+          username: "test_bot",
+          webhook: { url: receiver.url, secret_token: "seeded-secret", allowed_updates: ["message"] },
+        },
+      ],
+      users: [{ name: "alice" }],
+    });
+    try {
+      const info = await seeded.bot("getWebhookInfo");
+      expect(info.result).toMatchObject({ url: receiver.url, pending_update_count: 0 });
+      await seeded.control("POST", "users/alice/messages", { text: "hello from startup" });
+      const delivery = await receiver.next();
+      expect(delivery.headers["x-telegram-bot-api-secret-token"]).toBe("seeded-secret");
+      expect(delivery.body.message.text).toBe("hello from startup");
+      const calls = (await seeded.control("GET", "calls")).calls.map((call: any) => call.method);
+      expect(calls).toEqual(["getWebhookInfo"]);
+    } finally {
+      await seeded.close();
+      await receiver.close();
+    }
+  });
+
   it("lists the control routes for an unknown control path", async () => {
     const response = await fetch(`${emu.url}/_telegram/users/developer/buttons`, { method: "POST", body: "{}" });
     expect(response.status).toBe(404);
