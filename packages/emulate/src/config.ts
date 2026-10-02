@@ -17,6 +17,8 @@ export interface EmulateConfig {
   env?: Record<string, string>;
   /** Shell command `emulate run` executes after the emulators start and before the app, with the same env. */
   prepare?: string;
+  /** Shell command `emulate run` executes after the app exits, even when it fails. */
+  cleanup?: string;
 }
 
 export function defineConfig<Definitions extends Record<string, EmulatorDefinition | string>>(config: {
@@ -25,6 +27,7 @@ export function defineConfig<Definitions extends Record<string, EmulatorDefiniti
   tokens?: EmulateConfig["tokens"];
   env?: EmulateConfig["env"];
   prepare?: string;
+  cleanup?: string;
 }): typeof config {
   return config;
 }
