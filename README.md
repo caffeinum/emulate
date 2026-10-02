@@ -168,6 +168,17 @@ npx emulate run --port 0 -- bun test   # a free port per service; run ignores PO
 
 An unknown service, a missing seed value, an unset `${NAME}`, or a failing `prepare` stops the run with an error. Databases and other containers stay in your compose file; `prepare` and `cleanup` start and stop them around the run.
 
+Named `scenarios` overlay the config for one run: `npx emulate run --scenario onboarded -- pnpm dev` merges `scenarios.onboarded` into the config, one level deep per section (lists replace), so a scenario can add seed data or change `env` values.
+
+```yaml
+scenarios:
+  onboarded:
+    github:
+      repos: [{ owner: octocat, name: app }]
+    env:
+      FEATURE_FLAGS: onboarding-done
+```
+
 ## HTTPS with portless
 
 [portless](https://github.com/vercel-labs/portless) gives emulators trusted HTTPS URLs with auto-generated certs and no browser warnings.

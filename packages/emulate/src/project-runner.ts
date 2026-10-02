@@ -21,6 +21,8 @@ import type { GeneratedSecretRecord } from "./generated-secrets-file.js";
 
 export interface ProjectOptions extends StartOptions {
   config?: string;
+  /** Name under `scenarios:` in the config to overlay before seeding. */
+  scenario?: string;
   watch?: boolean;
 }
 export interface RetainedSeed {
