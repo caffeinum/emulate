@@ -95,3 +95,29 @@ it("does not start when the env block cannot resolve", async () => {
   });
   await expect(fetch("http://127.0.0.1:4880/")).rejects.toThrow();
 });
+
+it("picks free ports with --port 0 and runs prepare before the command", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const config =
+    'github: {}\nslack: {}\nprepare: echo "$GITHUB_API_URL" > prepared.txt\nenv:\n  GITHUB_API_URL: "{github.url}"\n  SLACK_PORT: "{slack.port}"\n';
+  await inProject(config, async (dir) => {
+    const script = `const { readFileSync, writeFileSync } = await import("node:fs");
+      writeFileSync("child.json", JSON.stringify({ prepared: readFileSync("prepared.txt", "utf8").trim(), env: process.env }));`;
+    expect(await runCommand({ port: 0 }, [process.execPath, "--input-type=module", "-e", script])).toBe(0);
+    const child = JSON.parse(await readFile(join(dir, "child.json"), "utf8"));
+    expect(child.prepared).toBe(child.env.GITHUB_API_URL);
+    expect(child.env.GITHUB_API_URL).toMatch(/^http:\/\/localhost:\d+$/);
+    expect(Number(child.env.SLACK_PORT)).toBeGreaterThan(1024);
+    expect(child.env.GITHUB_API_URL).not.toContain(`:${child.env.SLACK_PORT}`);
+  });
+});
+
+it("stops before the command when prepare fails", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  await inProject("github: {}\nprepare: exit 3\n", async (dir) => {
+    await expect(runCommand({ port: 0 }, ["sh", "-c", `touch ${JSON.stringify(join(dir, "ran"))}`])).rejects.toThrow(
+      "prepare exited with 3: exit 3",
+    );
+    await expect(readFile(join(dir, "ran"))).rejects.toThrow();
+  });
+});
