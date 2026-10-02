@@ -29,7 +29,15 @@ export interface RetainedSeed {
   secrets: GeneratedSecretRecord[];
 }
 export interface RunMetadata {
-  services: Array<{ name: string; url: string; port: number; source: string; inspectorUrl?: string }>;
+  services: Array<{
+    name: string;
+    url: string;
+    port: number;
+    source: string;
+    inspectorUrl?: string;
+    seed?: Record<string, unknown>;
+  }>;
+  env: Record<string, string>;
   dependencies: string[];
   directory: string;
   watch: string[];
@@ -58,6 +66,7 @@ export async function prepareProject(
     aliases: [],
     secrets: [],
     retained: {},
+    env: config.env,
   };
   let closed = false;
   let accepting = false;
@@ -78,22 +87,9 @@ export async function prepareProject(
       );
   }
   try {
-    const ports = new Set<number>();
+    const plan = planServices(config, options);
     for (const [index, service] of config.services.entries()) {
-      const port = service.port ?? options.port + index;
-      if (!Number.isInteger(port) || port < 1 || port > 65535)
-        throw new Error(`Invalid port for ${service.name}: ${port}`);
-      if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
-      ports.add(port);
-    }
-    for (const [index, service] of config.services.entries()) {
-      const port = service.port ?? options.port + index;
-      const baseUrl = resolveBaseUrl({
-        service: service.name,
-        port,
-        baseUrl: options.portless ? portlessBaseUrl(service.name) : options.baseUrl,
-        seedBaseUrl: service.baseUrl,
-      });
+      const { port, baseUrl } = plan[index]!;
       if (options.portless) metadata.aliases.push({ name: `${service.name}.emulate`, port });
       if (typeof service.emulator === "string") {
         const input = JSON.stringify(service.seed ?? {});
@@ -113,7 +109,8 @@ export async function prepareProject(
         item.port = port;
         const tokens = toTokens(config);
         const runtime = createPreparedServiceServer(item, tokens);
-        cleanups.push(() => {
+        cleanups.push(async () => {
+          await runtime.close();
           runtime.webhooks.clear();
           runtime.store.reset();
         });
@@ -123,7 +120,13 @@ export async function prepareProject(
           metadata.retained[service.name] = { emulator: service.emulator, input, config: item.svcSeedConfig!, secrets };
         metadata.secrets.push(...secrets);
         prepared.push({ fetch: runtime.app.fetch, port });
-        metadata.services.push({ name: service.name, port, url: baseUrl, source: service.source });
+        metadata.services.push({
+          name: service.name,
+          port,
+          url: baseUrl,
+          source: service.source,
+          seed: item.svcSeedConfig,
+        });
       } else {
         const persistence =
           typeof service.persistence === "string" ? filePersistence(service.persistence) : service.persistence;
@@ -155,6 +158,7 @@ export async function prepareProject(
           url: baseUrl,
           source: service.source,
           inspectorUrl: runtime.inspectorUrl,
+          seed: service.seed as Record<string, unknown> | undefined,
         });
       }
     }
@@ -197,6 +201,28 @@ export async function prepareProject(
     await close().catch((cleanup) => console.error(cleanup));
     throw error;
   }
+}
+
+/** Each service's port and advertised URL, as start would assign them. */
+export function planServices(
+  config: LoadedConfig,
+  options: Pick<ProjectOptions, "port" | "portless" | "baseUrl">,
+): Array<{ name: string; port: number; baseUrl: string }> {
+  const ports = new Set<number>();
+  return config.services.map((service, index) => {
+    const port = service.port ?? options.port + index;
+    if (!Number.isInteger(port) || port < 1 || port > 65535)
+      throw new Error(`Invalid port for ${service.name}: ${port}`);
+    if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
+    ports.add(port);
+    const baseUrl = resolveBaseUrl({
+      service: service.name,
+      port,
+      baseUrl: options.portless ? portlessBaseUrl(service.name) : options.baseUrl,
+      seedBaseUrl: service.baseUrl,
+    });
+    return { name: service.name, port, baseUrl };
+  });
 }
 
 function toTokens(config: LoadedConfig): Record<string, { login: string; id: number; scopes?: string[] }> {

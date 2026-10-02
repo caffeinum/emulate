@@ -103,6 +103,9 @@ npx emulate --port 3000
 # Use a seed config file
 npx emulate --seed config.yaml
 
+# Run your app with the config's env block, then stop the emulators
+npx emulate run -- pnpm dev
+
 # Generate omitted service secrets into a private file
 npx emulate start --seed config.yaml --generated-secrets-file .emulate-secrets.json
 
@@ -131,6 +134,32 @@ npx emulate list
 The port can also be set via `EMULATE_PORT` or `PORT` environment variables.
 
 For access from a container or another machine, use `npx emulate start --host 0.0.0.0`. Set `--base-url` to a URL reachable by those clients when using OAuth redirects or other advertised URLs.
+
+## Run your app against emulators
+
+`emulate run` starts the services in your config, runs your command with the config's `env` block set, and stops the emulators when the command exits. The config, seed data, and env mapping all live in one committed file, so no wrapper scripts are needed.
+
+```yaml
+# emulate.config.yaml
+github:
+  users: [{ login: octocat }]
+slack:
+  signing_secret: local-signing-secret
+
+env:
+  GITHUB_API_URL: "{github.url}"
+  SLACK_API_URL: "{slack.url}/api"
+  SLACK_SIGNING_SECRET: "{slack.signing_secret}"
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_dev
+```
+
+```bash
+npx emulate run -- pnpm dev
+npx emulate run -- pnpm test               # exits with the command's exit code
+npx emulate run --portless -- pnpm dev     # https://{service}.emulate.localhost URLs
+```
+
+`{service.url}`, `{service.port}`, and `{service.host}` are where that emulator runs. `{service.some.path}` (with `[n]` for list items) reads a value from that service's seed config. Other values, such as a local database URL, pass through unchanged. A template that names an unknown service or a value missing from the seed stops startup with an error rather than guessing. `run` accepts the same `--port`, `--host`, `--service`, `--config`, `--base-url`, and `--portless` options as `start`.
 
 ## HTTPS with portless
 

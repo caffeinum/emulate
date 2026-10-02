@@ -4,6 +4,7 @@ import { listCommand } from "./commands/list.js";
 import { SERVICE_NAMES } from "./registry.js";
 import { projectStartCommand } from "./commands/project-start.js";
 import { scaffoldCommand } from "./commands/scaffold.js";
+import { runCommand } from "./commands/run.js";
 
 declare const PKG_VERSION: string;
 const pkg = { version: PKG_VERSION };
@@ -11,6 +12,16 @@ const pkg = { version: PKG_VERSION };
 const defaultPort = process.env.EMULATE_PORT ?? process.env.PORT ?? "4000";
 
 const program = new Command();
+program.enablePositionalOptions();
+
+function parsePort(value: string): number {
+  const port = parseInt(value, 10);
+  if (Number.isNaN(port) || port < 1 || port > 65535) {
+    console.error(`Invalid port: ${value}`);
+    process.exit(1);
+  }
+  return port;
+}
 
 program
   .name("emulate")
@@ -150,6 +161,37 @@ program
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       process.exit(1);
+    }
+  });
+
+program
+  .command("run")
+  .description("Start the configured emulators, run a command with the config's env, then stop them")
+  .usage("[options] -- <command...>")
+  .argument("<command...>", "Command to run, e.g. pnpm dev")
+  .option("-p, --port <port>", "Base port", defaultPort)
+  .option("--host <host>", "Listening address (use 0.0.0.0 for network access)", "127.0.0.1")
+  .option("-s, --service <services>", "Comma-separated services to enable")
+  .option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration")
+  .option("--base-url <url>", "Override advertised base URL (supports {service} template)")
+  .option("--portless", "Serve over HTTPS via portless (auto-registers aliases)")
+  .passThroughOptions()
+  .action(async (command: string[], opts) => {
+    try {
+      process.exitCode = await runCommand(
+        {
+          port: parsePort(opts.port),
+          host: opts.host,
+          service: opts.service,
+          config: opts.config,
+          baseUrl: opts.baseUrl,
+          portless: opts.portless,
+        },
+        command,
+      );
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
     }
   });
 

@@ -48,6 +48,9 @@ npx emulate --port 3000
 # Use a seed config file
 npx emulate --seed config.yaml
 
+# Run your app with the config's env block, then stop the emulators
+npx emulate run -- pnpm dev
+
 # Generate omitted service secrets into a private file
 npx emulate start --seed config.yaml --generated-secrets-file .emulate-secrets.json
 
@@ -80,6 +83,32 @@ For access from a container or another machine, use `npx emulate start --host 0.
 The generated-secrets destination must not exist. emulate removes inherited ACLs, verifies effective owner-only access, and publishes complete JSON before opening listeners or configuring portless. Handled startup failures remove the invocation-owned artifact. A hard termination can leave a complete artifact that must be removed manually after confirming no invocation is using it. Only service-generated values appear in the artifact. Linux requires `setfacl` and `getfacl` from the `acl` package. The flag fails closed when access controls cannot be verified and is not supported on Windows.
 
 The advertised base URL (used in OAuth redirects, webhook URLs, etc.) can be overridden via `--base-url`, the `EMULATE_BASE_URL` env var (supports `{service}` template), or per-service `baseUrl` in the seed config. When running under portless, the `PORTLESS_URL` env var is also detected automatically.
+
+## Run your app against emulators
+
+`emulate run` starts the services in your config, runs your command with the config's `env` block set, and stops the emulators when the command exits. The config, seed data, and env mapping all live in one committed file, so no wrapper scripts are needed.
+
+```yaml
+# emulate.config.yaml
+github:
+  users: [{ login: octocat }]
+slack:
+  signing_secret: local-signing-secret
+
+env:
+  GITHUB_API_URL: "{github.url}"
+  SLACK_API_URL: "{slack.url}/api"
+  SLACK_SIGNING_SECRET: "{slack.signing_secret}"
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_dev
+```
+
+```bash
+npx emulate run -- pnpm dev
+npx emulate run -- pnpm test               # exits with the command's exit code
+npx emulate run --portless -- pnpm dev     # https://{service}.emulate.localhost URLs
+```
+
+`{service.url}`, `{service.port}`, and `{service.host}` are where that emulator runs. `{service.some.path}` (with `[n]` for list items) reads a value from that service's seed config. Other values, such as a local database URL, pass through unchanged. A template that names an unknown service or a value missing from the seed stops startup with an error rather than guessing. `run` accepts the same `--port`, `--host`, `--service`, `--config`, `--base-url`, and `--portless` options as `start`.
 
 ## Programmatic API
 
@@ -495,7 +524,7 @@ AWS_EMULATOR_URL=http://localhost:4007
 LINEAR_EMULATOR_URL=http://localhost:4012
 ```
 
-Then use these in your app to construct API and OAuth URLs. See each service's skill for SDK-specific override instructions.
+Then use these in your app to construct API and OAuth URLs. To map emulator URLs and seed values onto your app's own variable names, add an `env` block to the config and start the app with `npx emulate run -- <command>` (see Run your app against emulators). See each service's skill for SDK-specific override instructions.
 
 ## Framework Integration (Embedded Mode)
 
