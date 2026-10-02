@@ -84,6 +84,10 @@ The generated-secrets destination must not exist. emulate removes inherited ACLs
 
 The advertised base URL (used in OAuth redirects, webhook URLs, etc.) can be overridden via `--base-url`, the `EMULATE_BASE_URL` env var (supports `{service}` template), or per-service `baseUrl` in the seed config. When running under portless, the `PORTLESS_URL` env var is also detected automatically.
 
+## Request log and strict tokens
+
+Every built-in service records its recent requests (method, path, query, status, and text bodies up to 10 KB, last 1000) at `GET /_emulate/requests`, so tests can assert what the emulator saw; `DELETE /_emulate/requests` clears it. Set `strict_tokens: true` in a service's seed config to answer unknown tokens with 401 instead of treating them as the default user.
+
 ## Run your app against emulators
 
 Add an `env` block to the config and start your app with `emulate run`. It starts the configured services, runs the command with only the `env` block plus `PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `TMPDIR`, `LANG`, `NODE_OPTIONS`, and `CI`, then stops the services and exits with the command's code.
