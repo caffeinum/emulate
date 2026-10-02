@@ -5627,6 +5627,177 @@ function refusalsAsBackendErrors(backend) {
   }
   return wrapped;
 }
+var DEFAULT_TELEGRAM_BOT = {
+  token: "1000000001:emulate-telegram-bot-token",
+  username: "emulate_bot",
+  first_name: "Emulate Bot"
+};
+var DEFAULT_TELEGRAM_USER = {
+  name: "developer",
+  first_name: "Developer",
+  username: "developer"
+};
+var SEED_KEY = "telegram.seed";
+var GENERATION_KEY = "telegram.generation";
+function writeTelegramSeed(store, seed) {
+  store.setData(SEED_KEY, seed);
+  store.setData(GENERATION_KEY, randomUUID());
+}
+function readTelegramSeed(store) {
+  const seed = store.getData(SEED_KEY);
+  if (!seed) throw new Error("telegram emulator was not seeded");
+  return seed;
+}
+function recordTopic(world, chatId, name, threadId) {
+  (world.ids.topics[topicChatKey(world, chatId)] ??= {})[name] = threadId;
+}
+function topicChatKey(world, chatId) {
+  return Object.entries(world.ids.chats).find(([, id]) => id === chatId)?.[0] ?? String(chatId);
+}
+function botIdFromToken(token) {
+  const match = /^(\d+):[A-Za-z0-9_-]+$/.exec(token);
+  if (!match) throw new Error(`telegram bot token ${token} must look like <numeric id>:<secret>`);
+  return Number(match[1]);
+}
+var TelegramRuntime = class {
+  constructor(store, createBackend) {
+    this.store = store;
+    this.createBackend = createBackend;
+  }
+  current;
+  currentGeneration;
+  world() {
+    const generation = this.store.getData(GENERATION_KEY);
+    if (!generation) throw new Error("telegram emulator was not seeded");
+    if (this.current && this.currentGeneration === generation) return this.current;
+    const previous = this.current;
+    this.currentGeneration = generation;
+    this.current = (async () => {
+      if (previous) await (await previous.catch(() => void 0))?.backend.stop();
+      return buildWorld(generation, readTelegramSeed(this.store), this.createBackend);
+    })();
+    return this.current;
+  }
+  async close() {
+    const current = this.current;
+    this.current = void 0;
+    this.currentGeneration = void 0;
+    if (current) await (await current.catch(() => void 0))?.backend.stop();
+  }
+};
+async function buildWorld(generation, seed, createBackend) {
+  const primary = seed.bots[0];
+  if (!primary) throw new Error("telegram seed needs at least one bot");
+  const backend = await createBackend(primary);
+  try {
+    const ids = { bots: {}, users: {}, chats: {}, topics: {} };
+    const botIdsByToken = /* @__PURE__ */ new Map();
+    const profiles = /* @__PURE__ */ new Map();
+    for (const bot of seed.bots) {
+      if (ids.bots[bot.username] !== void 0) throw new Error(`telegram seed bot ${bot.username} is listed twice`);
+      const id = bot === primary ? botIdFromToken(bot.token) : (await backend.addBot(bot)).id;
+      ids.bots[bot.username] = id;
+      botIdsByToken.set(bot.token, id);
+      profiles.set(id, {
+        description: bot.description === void 0 ? {} : { "": bot.description },
+        short_description: bot.short_description === void 0 ? {} : { "": bot.short_description }
+      });
+    }
+    for (const user of seed.users) {
+      if (ids.users[user.name] !== void 0) throw new Error(`telegram seed user ${user.name} is listed twice`);
+      ids.users[user.name] = await backend.createUser({
+        first_name: user.first_name ?? user.name,
+        last_name: user.last_name,
+        username: user.username,
+        language_code: user.language_code,
+        is_premium: user.is_premium
+      });
+    }
+    const userId = (ref, owner) => {
+      const id = ids.users[ref];
+      if (id === void 0) throw new Error(`telegram seed ${owner} references unknown user ${ref}`);
+      return id;
+    };
+    const botId = (ref, owner) => {
+      const id = ids.bots[ref];
+      if (id === void 0) throw new Error(`telegram seed ${owner} references unknown bot ${ref}`);
+      return id;
+    };
+    for (const chat of seed.chats) {
+      if (ids.chats[chat.name] !== void 0) throw new Error(`telegram seed chat ${chat.name} is listed twice`);
+      const owner = userId(chat.owner, `chat ${chat.name}`);
+      const chatId = await backend.createChat({
+        title: chat.title ?? chat.name,
+        type: chat.type,
+        owner_id: owner,
+        forum: chat.forum
+      });
+      ids.chats[chat.name] = chatId;
+      for (const member of chat.members ?? []) {
+        const memberId = userId(member, `chat ${chat.name}`);
+        if (memberId !== owner) await backend.join(chatId, memberId);
+      }
+      if (chat.topics?.length) {
+        if (!chat.forum) throw new Error(`telegram seed chat ${chat.name} has topics but is not a forum`);
+        ids.topics[chat.name] = {};
+        for (const topic of chat.topics) {
+          ids.topics[chat.name][topic] = await backend.createTopic(chatId, topic, owner);
+        }
+      }
+      for (const entry of chat.bots ?? []) {
+        const spec = typeof entry === "string" ? { bot: entry } : entry;
+        const membership = { status: spec.status ?? "administrator", rights: spec.rights };
+        await backend.setBotMembership(chatId, botId(spec.bot, `chat ${chat.name}`), membership);
+      }
+    }
+    await drainSeedUpdates(backend, seed.bots);
+    await registerSeedWebhooks(backend, seed.bots);
+    const { calls } = await backend.getCalls();
+    return {
+      generation,
+      backend,
+      ids,
+      botIdsByToken,
+      profiles,
+      topicMeta: /* @__PURE__ */ new Map(),
+      adapterCalls: [],
+      seedCallCount: calls.length
+    };
+  } catch (error) {
+    await backend.stop();
+    throw error;
+  }
+}
+async function drainSeedUpdates(backend, bots) {
+  for (const bot of bots) {
+    const call = async (params) => {
+      const response = await fetch(`${backend.origin}/bot${bot.token}/getUpdates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params)
+      });
+      const body = await response.json();
+      if (!body.ok || !body.result) throw new Error(`telegram seed could not drain updates: ${body.description}`);
+      return body.result;
+    };
+    const pending = await call({ timeout: 0 });
+    const last = pending.at(-1);
+    if (last) await call({ timeout: 0, offset: last.update_id + 1 });
+  }
+}
+async function registerSeedWebhooks(backend, bots) {
+  for (const bot of bots) {
+    if (!bot.webhook) continue;
+    if (!bot.webhook.url) throw new Error(`telegram seed bot ${bot.username} has a webhook without a url`);
+    const response = await fetch(`${backend.origin}/bot${bot.token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bot.webhook)
+    });
+    const body = await response.json();
+    if (!body.ok) throw new Error(`telegram seed bot ${bot.username} webhook was refused: ${body.description}`);
+  }
+}
 var BotApiError = class extends Error {
   constructor(errorCode, description) {
     super(description);
@@ -5662,6 +5833,7 @@ var ADAPTER_METHODS = {
     const name = requireString(params, "name");
     const owner = await backendCall(() => world.backend.chatOwner(chatId));
     const threadId = await backendCall(() => world.backend.createTopic(chatId, name, owner));
+    recordTopic(world, chatId, name, threadId);
     const iconColor = params.icon_color === void 0 ? DEFAULT_TOPIC_ICON_COLOR : Number(params.icon_color);
     const iconCustomEmojiId = optionalString(params, "icon_custom_emoji_id");
     world.topicMeta.set(topicKey(chatId, threadId), {
@@ -5921,8 +6093,7 @@ function controlRoutes(app, runtime) {
       const name = requireString2(body, "name");
       const by = body.by === void 0 ? await world.backend.chatOwner(chatId) : userRef(world, body.by);
       const threadId = await world.backend.createTopic(chatId, name, by);
-      const chatName = Object.entries(world.ids.chats).find(([, id]) => id === chatId)?.[0];
-      if (chatName) (world.ids.topics[chatName] ??= {})[name] = threadId;
+      recordTopic(world, chatId, name, threadId);
       return { message_thread_id: threadId };
     })
   );
@@ -6054,8 +6225,7 @@ function threadRef(world, chatId, topic) {
   if (topic === void 0) return void 0;
   if (typeof topic === "number") return topic;
   if (typeof topic !== "string") throw new ControlError(400, "topic must be a thread id or topic name");
-  const chatName = Object.entries(world.ids.chats).find(([, id]) => id === chatId)?.[0];
-  const threadId = chatName ? world.ids.topics[chatName]?.[topic] : void 0;
+  const threadId = world.ids.topics[topicChatKey(world, chatId)]?.[topic];
   if (threadId === void 0) throw new ControlError(404, `unknown topic ${topic}`);
   return threadId;
 }
@@ -6090,171 +6260,6 @@ function optionalString2(body, field) {
   if (value === void 0) return void 0;
   if (typeof value !== "string") throw new ControlError(400, `${field} must be a string`);
   return value;
-}
-var DEFAULT_TELEGRAM_BOT = {
-  token: "1000000001:emulate-telegram-bot-token",
-  username: "emulate_bot",
-  first_name: "Emulate Bot"
-};
-var DEFAULT_TELEGRAM_USER = {
-  name: "developer",
-  first_name: "Developer",
-  username: "developer"
-};
-var SEED_KEY = "telegram.seed";
-var GENERATION_KEY = "telegram.generation";
-function writeTelegramSeed(store, seed) {
-  store.setData(SEED_KEY, seed);
-  store.setData(GENERATION_KEY, randomUUID());
-}
-function readTelegramSeed(store) {
-  const seed = store.getData(SEED_KEY);
-  if (!seed) throw new Error("telegram emulator was not seeded");
-  return seed;
-}
-function botIdFromToken(token) {
-  const match = /^(\d+):[A-Za-z0-9_-]+$/.exec(token);
-  if (!match) throw new Error(`telegram bot token ${token} must look like <numeric id>:<secret>`);
-  return Number(match[1]);
-}
-var TelegramRuntime = class {
-  constructor(store, createBackend) {
-    this.store = store;
-    this.createBackend = createBackend;
-  }
-  current;
-  currentGeneration;
-  world() {
-    const generation = this.store.getData(GENERATION_KEY);
-    if (!generation) throw new Error("telegram emulator was not seeded");
-    if (this.current && this.currentGeneration === generation) return this.current;
-    const previous = this.current;
-    this.currentGeneration = generation;
-    this.current = (async () => {
-      if (previous) await (await previous.catch(() => void 0))?.backend.stop();
-      return buildWorld(generation, readTelegramSeed(this.store), this.createBackend);
-    })();
-    return this.current;
-  }
-  async close() {
-    const current = this.current;
-    this.current = void 0;
-    this.currentGeneration = void 0;
-    if (current) await (await current.catch(() => void 0))?.backend.stop();
-  }
-};
-async function buildWorld(generation, seed, createBackend) {
-  const primary = seed.bots[0];
-  if (!primary) throw new Error("telegram seed needs at least one bot");
-  const backend = await createBackend(primary);
-  try {
-    const ids = { bots: {}, users: {}, chats: {}, topics: {} };
-    const botIdsByToken = /* @__PURE__ */ new Map();
-    const profiles = /* @__PURE__ */ new Map();
-    for (const bot of seed.bots) {
-      if (ids.bots[bot.username] !== void 0) throw new Error(`telegram seed bot ${bot.username} is listed twice`);
-      const id = bot === primary ? botIdFromToken(bot.token) : (await backend.addBot(bot)).id;
-      ids.bots[bot.username] = id;
-      botIdsByToken.set(bot.token, id);
-      profiles.set(id, {
-        description: bot.description === void 0 ? {} : { "": bot.description },
-        short_description: bot.short_description === void 0 ? {} : { "": bot.short_description }
-      });
-    }
-    for (const user of seed.users) {
-      if (ids.users[user.name] !== void 0) throw new Error(`telegram seed user ${user.name} is listed twice`);
-      ids.users[user.name] = await backend.createUser({
-        first_name: user.first_name ?? user.name,
-        last_name: user.last_name,
-        username: user.username,
-        language_code: user.language_code,
-        is_premium: user.is_premium
-      });
-    }
-    const userId = (ref, owner) => {
-      const id = ids.users[ref];
-      if (id === void 0) throw new Error(`telegram seed ${owner} references unknown user ${ref}`);
-      return id;
-    };
-    const botId = (ref, owner) => {
-      const id = ids.bots[ref];
-      if (id === void 0) throw new Error(`telegram seed ${owner} references unknown bot ${ref}`);
-      return id;
-    };
-    for (const chat of seed.chats) {
-      if (ids.chats[chat.name] !== void 0) throw new Error(`telegram seed chat ${chat.name} is listed twice`);
-      const owner = userId(chat.owner, `chat ${chat.name}`);
-      const chatId = await backend.createChat({
-        title: chat.title ?? chat.name,
-        type: chat.type,
-        owner_id: owner,
-        forum: chat.forum
-      });
-      ids.chats[chat.name] = chatId;
-      for (const member of chat.members ?? []) {
-        const memberId = userId(member, `chat ${chat.name}`);
-        if (memberId !== owner) await backend.join(chatId, memberId);
-      }
-      if (chat.topics?.length) {
-        if (!chat.forum) throw new Error(`telegram seed chat ${chat.name} has topics but is not a forum`);
-        ids.topics[chat.name] = {};
-        for (const topic of chat.topics) {
-          ids.topics[chat.name][topic] = await backend.createTopic(chatId, topic, owner);
-        }
-      }
-      for (const entry of chat.bots ?? []) {
-        const spec = typeof entry === "string" ? { bot: entry } : entry;
-        const membership = { status: spec.status ?? "administrator", rights: spec.rights };
-        await backend.setBotMembership(chatId, botId(spec.bot, `chat ${chat.name}`), membership);
-      }
-    }
-    await drainSeedUpdates(backend, seed.bots);
-    await registerSeedWebhooks(backend, seed.bots);
-    const { calls } = await backend.getCalls();
-    return {
-      generation,
-      backend,
-      ids,
-      botIdsByToken,
-      profiles,
-      topicMeta: /* @__PURE__ */ new Map(),
-      adapterCalls: [],
-      seedCallCount: calls.length
-    };
-  } catch (error) {
-    await backend.stop();
-    throw error;
-  }
-}
-async function drainSeedUpdates(backend, bots) {
-  for (const bot of bots) {
-    const call = async (params) => {
-      const response = await fetch(`${backend.origin}/bot${bot.token}/getUpdates`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params)
-      });
-      const body = await response.json();
-      if (!body.ok || !body.result) throw new Error(`telegram seed could not drain updates: ${body.description}`);
-      return body.result;
-    };
-    const pending = await call({ timeout: 0 });
-    const last = pending.at(-1);
-    if (last) await call({ timeout: 0, offset: last.update_id + 1 });
-  }
-}
-async function registerSeedWebhooks(backend, bots) {
-  for (const bot of bots) {
-    if (!bot.webhook) continue;
-    if (!bot.webhook.url) throw new Error(`telegram seed bot ${bot.username} has a webhook without a url`);
-    const response = await fetch(`${backend.origin}/bot${bot.token}/setWebhook`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bot.webhook)
-    });
-    const body = await response.json();
-    if (!body.ok) throw new Error(`telegram seed bot ${bot.username} webhook was refused: ${body.description}`);
-  }
 }
 function seedDefaults(store) {
   writeTelegramSeed(store, { bots: [DEFAULT_TELEGRAM_BOT], users: [DEFAULT_TELEGRAM_USER], chats: [] });
@@ -6322,4 +6327,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-SKCN57BD.js.map
+//# sourceMappingURL=dist-37S6MG7T.js.map
