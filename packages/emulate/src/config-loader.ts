@@ -5,6 +5,7 @@ import { ProjectLoader } from "./project-loader.js";
 import { assertEmulatorDefinition, type EmulatorDefinition, type PersistenceAdapter } from "@emulators/core";
 import { SERVICE_NAMES, SERVICE_REGISTRY, type ServiceName } from "./registry.js";
 import type { EmulateConfig, ServiceConfig } from "./config.js";
+import { validateEnvBlock } from "./env-template.js";
 
 export const CONFIG_FILES = [
   "emulate.config.ts",
@@ -40,6 +41,7 @@ export interface LoadedConfig {
   directory: string;
   services: ResolvedService[];
   tokens?: EmulateConfig["tokens"];
+  env: Record<string, string>;
   watch: string[];
   loader: ProjectLoader;
 }
@@ -68,7 +70,9 @@ export async function loadConfig(
       } else raw = (await loader.load(path)) as typeof raw;
       if (!isRecord(raw)) throw new Error(`${path} must export a configuration object`);
     }
-    const unknown = Object.keys(raw).filter((key) => ![...SERVICE_NAMES, "services", "tokens", "watch"].includes(key));
+    const unknown = Object.keys(raw).filter(
+      (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env"].includes(key),
+    );
     if (unknown.length)
       throw new Error(`Unknown config key: ${unknown.join(", ")}. Register custom APIs under services.`);
     if (raw.services !== undefined && !isRecord(raw.services))
@@ -87,6 +91,7 @@ export async function loadConfig(
         ))
     )
       throw new Error("tokens must map token strings to { login, scopes? }");
+    const env = raw.env === undefined ? {} : validateEnvBlock(raw.env);
     const entries: Record<string, ServiceConfig> = { ...raw.services };
     for (const name of SERVICE_NAMES)
       if (Object.hasOwn(raw, name)) {
@@ -156,7 +161,7 @@ export async function loadConfig(
             : (persistence as PersistenceAdapter | undefined),
       });
     }
-    return { path, directory, services, tokens: raw.tokens, watch: raw.watch ?? [], loader };
+    return { path, directory, services, tokens: raw.tokens, env, watch: raw.watch ?? [], loader };
   } catch (error) {
     loader.close();
     throw error;
