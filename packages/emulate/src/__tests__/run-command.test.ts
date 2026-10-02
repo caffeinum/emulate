@@ -63,6 +63,22 @@ describe("env templates", () => {
     expect(() => resolveEnv({ X: "{slack}" }, services)).toThrow("needs a field");
   });
 
+  it("passes chosen variables through from the outside environment", () => {
+    expect(
+      resolveEnv({ KEY: "{env.OPENAI_API_KEY}", MIX: "Bearer {env.TOKEN}" }, services, {
+        OPENAI_API_KEY: "sk-real",
+        TOKEN: "t",
+      }),
+    ).toEqual({
+      KEY: "sk-real",
+      MIX: "Bearer t",
+    });
+    expect(() => resolveEnv({ KEY: "{env.MISSING}" }, services, {})).toThrow(
+      "env.KEY: {env.MISSING} is not set in the environment emulate was started with",
+    );
+    expect(() => resolveEnv({ KEY: "{env}" }, services, {})).toThrow("write {env.NAME}");
+  });
+
   it("validates the env block in config", async () => {
     const dir = await projectWith("github: {}\nenv:\n  1BAD: x\n");
     await expect(loadConfig({ cwd: dir })).rejects.toThrow("env.1BAD: not a valid environment variable name");
