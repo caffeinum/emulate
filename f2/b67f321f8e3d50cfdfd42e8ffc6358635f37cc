@@ -1,0 +1,88 @@
+README.md
+  h_e9fef506e0f829 34,1168-1247,1542,1572-1573
+THIRD_PARTY_NOTICES.md
+  h_e9fef506e0f829 3-4,23-56
+dist/api.d.ts
+  h_e9fef506e0f829 246
+dist/api.js
+  h_e9fef506e0f829 915,945-948,958,1931,1958,2022,2104,2185,2210,2235,2263,2285,2302,2339,2378,2443,2494-2521,2644-2650,2679
+dist/api.js.map
+  h_e9fef506e0f829 1
+dist/chunk-ZYOYDRRR.js
+  h_e9fef506e0f829 20-21,29,56,120,202,283,308,333,361,383,400,437,476,541,592-619,1544,1574-1577,1587,3529
+dist/chunk-ZYOYDRRR.js.map
+  h_e9fef506e0f829 1
+dist/dist-2HTLM353.js
+  h_e9fef506e0f829 1685
+dist/dist-2HTLM353.js.map
+  h_e9fef506e0f829 1
+dist/dist-BT2LIYWL.js
+  h_e9fef506e0f829 2110
+dist/dist-BT2LIYWL.js.map
+  h_e9fef506e0f829 1
+dist/dist-F27HOZGL.js
+  h_e9fef506e0f829 1419
+dist/dist-F27HOZGL.js.map
+  h_e9fef506e0f829 1
+dist/dist-HAUAPUZX.js
+  h_e9fef506e0f829 14204
+dist/dist-HAUAPUZX.js.map
+  h_e9fef506e0f829 1
+dist/dist-IPEG4W3H.js
+  h_e9fef506e0f829 5090
+dist/dist-IPEG4W3H.js.map
+  h_e9fef506e0f829 1
+dist/dist-J3YFC2HW.js
+  h_e9fef506e0f829 12464
+dist/dist-J3YFC2HW.js.map
+  h_e9fef506e0f829 1
+dist/dist-K3QGAVGO.js
+  h_e9fef506e0f829 1-5721
+dist/dist-K3QGAVGO.js.map
+  h_e9fef506e0f829 1
+dist/dist-KQKEMKSK.js
+  h_e9fef506e0f829 1043
+dist/dist-KQKEMKSK.js.map
+  h_e9fef506e0f829 1
+dist/dist-LC73GVW4.js
+  h_e9fef506e0f829 2299
+dist/dist-LC73GVW4.js.map
+  h_e9fef506e0f829 1
+dist/dist-LNGA5JKU.js
+  h_e9fef506e0f829 3187
+dist/dist-LNGA5JKU.js.map
+  h_e9fef506e0f829 1
+dist/dist-NF45RUOL.js
+  h_e9fef506e0f829 1019
+dist/dist-NF45RUOL.js.map
+  h_e9fef506e0f829 1
+dist/dist-OCCLIAIX.js
+  h_e9fef506e0f829 788
+dist/dist-OCCLIAIX.js.map
+  h_e9fef506e0f829 1
+dist/dist-Q2CWGPBQ.js
+  h_e9fef506e0f829 4229
+dist/dist-Q2CWGPBQ.js.map
+  h_e9fef506e0f829 1
+dist/dist-YEGJ2WRI.js
+  h_e9fef506e0f829 1911
+dist/dist-YEGJ2WRI.js.map
+  h_e9fef506e0f829 1
+dist/index.js
+  h_e9fef506e0f829 16
+dist/project-worker.js
+  h_e9fef506e0f829 3
+package.json
+  h_e9fef506e0f829 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f2b67f321f8e3d50cfdfd42e8ffc6358635f37cc",
+  "prompts": {},
+  "humans": {
+    "h_e9fef506e0f829": {
+      "author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
