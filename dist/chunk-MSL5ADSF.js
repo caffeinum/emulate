@@ -26,7 +26,7 @@ var SERVICE_REGISTRY = {
     label: "Vercel REST API emulator",
     endpoints: "projects, deployments, domains, env vars, users, teams, file uploads, protection bypass, blob storage",
     async load() {
-      const mod = await import("./dist-GO7Q3HY3.js");
+      const mod = await import("./dist-TDYEHKI2.js");
       return { plugin: mod.vercelPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -53,7 +53,7 @@ var SERVICE_REGISTRY = {
     label: "GitHub REST API emulator",
     endpoints: "users, repos, issues, PRs, comments, reviews, labels, milestones, branches, git data, orgs, teams, releases, webhooks, search, actions, checks, rate limit",
     async load() {
-      const mod = await import("./dist-DDDSC46D.js");
+      const mod = await import("./dist-6HOJGGYL.js");
       return {
         plugin: mod.githubPlugin,
         seedFromConfig: mod.seedFromConfig,
@@ -117,7 +117,7 @@ var SERVICE_REGISTRY = {
     label: "Google OAuth 2.0 / OpenID Connect + Gmail, Calendar, and Drive emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, RS256 OIDC discovery and JWKS, token revocation, Gmail messages/drafts/threads/labels/history/settings, Calendar discovery/lists/events/freebusy, Drive files/uploads",
     async load() {
-      const mod = await import("./dist-NKQJAMUU.js");
+      const mod = await import("./dist-CSAYDQIO.js");
       return { plugin: mod.googlePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -199,7 +199,7 @@ var SERVICE_REGISTRY = {
     label: "Slack API emulator",
     endpoints: "auth, chat, conversations, users, profiles, presence, files, pins, bookmarks, views, reactions, team, OAuth, incoming webhooks, inspector",
     async load() {
-      const mod = await import("./dist-UNBEAPRG.js");
+      const mod = await import("./dist-MR3R7P6U.js");
       return { plugin: mod.slackPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -280,7 +280,7 @@ var SERVICE_REGISTRY = {
     label: "Apple Sign In / OAuth emulator",
     endpoints: "OAuth authorize, token exchange, JWKS",
     async load() {
-      const mod = await import("./dist-ZPBDOEX4.js");
+      const mod = await import("./dist-LZDZJ6NT.js");
       return { plugin: mod.applePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -305,7 +305,7 @@ var SERVICE_REGISTRY = {
     label: "Microsoft Entra ID OAuth 2.0 / OpenID Connect emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, OIDC discovery, Graph /me, logout, token revocation",
     async load() {
-      const mod = await import("./dist-GJMSG6EZ.js");
+      const mod = await import("./dist-XR557IF3.js");
       return { plugin: mod.microsoftPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -330,7 +330,7 @@ var SERVICE_REGISTRY = {
     label: "Okta OAuth 2.0 / OpenID Connect + management API emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo/introspect/revoke/logout, users, groups, apps, authorization servers",
     async load() {
-      const mod = await import("./dist-7LHOQLDZ.js");
+      const mod = await import("./dist-WF35VR6L.js");
       return { plugin: mod.oktaPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -358,7 +358,7 @@ var SERVICE_REGISTRY = {
     label: "AWS cloud service emulator",
     endpoints: "S3 (buckets, objects), SQS (queues, messages), IAM (users, roles, access keys), STS (assume role, caller identity)",
     async load() {
-      const mod = await import("./dist-WFROWEHG.js");
+      const mod = await import("./dist-TPU46F5J.js");
       return { plugin: mod.awsPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -380,7 +380,7 @@ var SERVICE_REGISTRY = {
     label: "Resend email API emulator",
     endpoints: "emails with 24-hour Idempotency-Key replay, domains, contacts, API keys, inbox UI",
     async load() {
-      const mod = await import("./dist-LMGVOND5.js");
+      const mod = await import("./dist-BIXXNFKI.js");
       return { plugin: mod.resendPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -397,7 +397,7 @@ var SERVICE_REGISTRY = {
     label: "Stripe payments emulator",
     endpoints: "customers, payment methods, customer sessions, payment intents, charges, products, prices, checkout sessions, webhooks",
     async load() {
-      const mod = await import("./dist-5WXQYZ7Q.js");
+      const mod = await import("./dist-SNXHPNFU.js");
       return { plugin: mod.stripePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -434,7 +434,7 @@ var SERVICE_REGISTRY = {
     label: "Clerk authentication and user management emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo, users, email addresses, organizations, memberships, invitations, sessions",
     async load() {
-      const mod = await import("./dist-T6IL3MMW.js");
+      const mod = await import("./dist-EAAQMUXA.js");
       return { plugin: mod.clerkPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -473,7 +473,7 @@ var SERVICE_REGISTRY = {
     label: "Linear GraphQL API emulator",
     endpoints: "GraphQL, OAuth, issues, teams, users, workflow states, comments, labels, projects, cycles, webhooks, agents, inspector",
     async load() {
-      const mod = await import("./dist-GQN6OZZ2.js");
+      const mod = await import("./dist-QHTJXXNG.js");
       return { plugin: mod.linearPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -538,7 +538,7 @@ var SERVICE_REGISTRY = {
     label: "Twilio API emulator",
     endpoints: "accounts, API keys, phone numbers, Programmable Messaging, Messaging Services, Verify, Voice, webhooks, simulator, inspector",
     async load() {
-      const mod = await import("./dist-Z24BQHL3.js");
+      const mod = await import("./dist-N3LK2QRW.js");
       return { plugin: mod.twilioPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -594,7 +594,7 @@ var SERVICE_REGISTRY = {
     label: "Telegram Bot API emulator",
     endpoints: "Bot API at /bot<token>/<method> (messages, media, files, webhooks, getUpdates, forum topics, commands, descriptions), control API, inspector",
     async load() {
-      const mod = await import("./dist-TZMFHJQR.js");
+      const mod = await import("./dist-RETMDOP4.js");
       return { plugin: mod.telegramPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -1571,10 +1571,8 @@ function createServer(plugin, options = {}) {
     }
     await next();
   });
-  const dispose = plugin.register(app, store, webhooks, baseUrl, tokenMap);
-  const close = async () => {
-    if (dispose) await dispose();
-  };
+  const close = plugin.register(app, store, webhooks, baseUrl, tokenMap) ?? (async () => {
+  });
   app.notFound(
     (c) => c.json(
       {
@@ -2828,75 +2826,49 @@ ${source}`
 };
 
 // src/env-template.ts
-var PLACEHOLDER = /\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}|\{([^{}]+)\}/g;
+var PLACEHOLDER = /\$\$|\$\{([A-Za-z_]\w*)(?::-([^}]*))?\}|\{([^{}]+)\}/g;
+var isScalar = (value) => ["string", "number", "boolean"].includes(typeof value);
 function validateEnvBlock(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("env must map environment variable names to strings");
-  }
-  const env = {};
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("env must map variable names to strings");
   for (const [name, template] of Object.entries(value)) {
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error(`env.${name}: not a valid environment variable name`);
-    if (typeof template !== "string" && typeof template !== "number" && typeof template !== "boolean") {
-      throw new Error(`env.${name} must be a string`);
-    }
-    env[name] = String(template);
+    if (!/^[A-Za-z_]\w*$/.test(name)) throw new Error(`env.${name}: not a valid environment variable name`);
+    if (!isScalar(template)) throw new Error(`env.${name} must be a string`);
   }
-  return env;
+  return Object.fromEntries(Object.entries(value).map(([name, template]) => [name, String(template)]));
 }
 function resolveEnv(env, services, outside = process.env) {
-  const byName = new Map(services.map((service) => [service.name, service]));
-  const resolved = {};
-  for (const [name, template] of Object.entries(env)) {
-    resolved[name] = template.replace(
-      PLACEHOLDER,
-      (match, outsideName, fallback, expression) => {
-        if (match === "$$") return "$";
-        if (outsideName) {
-          const value = outside[outsideName];
-          if (value !== void 0) return value;
-          if (fallback !== void 0) return fallback;
-          throw new Error(`env.${name}: \${${outsideName}} is not set in the environment emulate was started with`);
-        }
-        return resolveExpression(name, expression.trim(), byName);
-      }
-    );
-  }
-  return resolved;
-}
-function resolveExpression(variable, expression, services) {
-  const [serviceName, ...path] = splitPath(expression);
-  const service = serviceName ? services.get(serviceName) : void 0;
-  if (!service) {
-    const known = [...services.keys()].join(", ") || "none";
-    throw new Error(`env.${variable}: {${expression}} names no running service (services: ${known})`);
-  }
-  if (path.length === 0) throw new Error(`env.${variable}: {${expression}} needs a field, e.g. {${serviceName}.url}`);
-  if (path.length === 1 && (path[0] === "url" || path[0] === "port" || path[0] === "host")) {
-    if (path[0] === "url") return service.url;
-    if (path[0] === "port") return String(service.port);
-    return new URL(service.url).host;
-  }
-  let value = service.seed;
-  for (const segment of path) {
-    if (value === null || typeof value !== "object" || !Object.hasOwn(value, segment)) {
+  const lookup = (name, expression) => {
+    const [serviceName, ...path] = expression.trim().split(/[.[\]]+/).filter(Boolean);
+    const service = services.find((candidate) => candidate.name === serviceName);
+    if (!service) {
       throw new Error(
-        `env.${variable}: {${expression}} is not set in the ${serviceName} seed config; set it there so the value is deterministic`
+        `env.${name}: {${expression}} names no running service (services: ${services.map((s) => s.name).join(", ")})`
       );
     }
-    value = value[segment];
-  }
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
-  throw new Error(`env.${variable}: {${expression}} is ${value === null ? "null" : typeof value}, not a single value`);
-}
-function splitPath(expression) {
-  const segments = [];
-  for (const part of expression.split(".")) {
-    const match = /^([^[\]]*)((?:\[\d+\])*)$/.exec(part);
-    if (!match) throw new Error(`Invalid env template path: {${expression}}`);
-    if (match[1]) segments.push(match[1]);
-    for (const index of match[2].matchAll(/\[(\d+)\]/g)) segments.push(index[1]);
-  }
-  return segments;
+    const fields = { url: service.url, port: service.port, host: new URL(service.url).host };
+    const value = path.length === 1 && path[0] in fields ? fields[path[0]] : path.reduce((node, key) => {
+      if (!node || typeof node !== "object" || !Object.hasOwn(node, key)) {
+        throw new Error(`env.${name}: {${expression}} is not set in the ${serviceName} seed config`);
+      }
+      return node[key];
+    }, service.seed);
+    if (path.length === 0 || !isScalar(value)) throw new Error(`env.${name}: {${expression}} is not a single value`);
+    return String(value);
+  };
+  return Object.fromEntries(
+    Object.entries(env).map(([name, template]) => [
+      name,
+      template.replace(PLACEHOLDER, (_match, outsideName, fallback, expression) => {
+        if (expression !== void 0) return lookup(name, expression);
+        if (!outsideName) return "$";
+        const value = outside[outsideName] ?? fallback;
+        if (value === void 0)
+          throw new Error(`env.${name}: \${${outsideName}} is not set in the environment emulate was started with`);
+        return value;
+      })
+    ])
+  );
 }
 
 // src/config-loader.ts
@@ -3456,9 +3428,22 @@ async function prepareProject(options, retained = {}, reload = false, onDependen
       );
   }
   try {
-    const plan = planServices(config, options);
+    const ports = /* @__PURE__ */ new Set();
     for (const [index, service] of config.services.entries()) {
-      const { port, baseUrl } = plan[index];
+      const port = service.port ?? options.port + index;
+      if (!Number.isInteger(port) || port < 1 || port > 65535)
+        throw new Error(`Invalid port for ${service.name}: ${port}`);
+      if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
+      ports.add(port);
+    }
+    for (const [index, service] of config.services.entries()) {
+      const port = service.port ?? options.port + index;
+      const baseUrl = resolveBaseUrl({
+        service: service.name,
+        port,
+        baseUrl: options.portless ? portlessBaseUrl(service.name) : options.baseUrl,
+        seedBaseUrl: service.baseUrl
+      });
       if (options.portless) metadata.aliases.push({ name: `${service.name}.emulate`, port });
       if (typeof service.emulator === "string") {
         const input = JSON.stringify(service.seed ?? {});
@@ -3569,23 +3554,6 @@ async function prepareProject(options, retained = {}, reload = false, onDependen
     throw error;
   }
 }
-function planServices(config, options) {
-  const ports = /* @__PURE__ */ new Set();
-  return config.services.map((service, index) => {
-    const port = service.port ?? options.port + index;
-    if (!Number.isInteger(port) || port < 1 || port > 65535)
-      throw new Error(`Invalid port for ${service.name}: ${port}`);
-    if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
-    ports.add(port);
-    const baseUrl = resolveBaseUrl({
-      service: service.name,
-      port,
-      baseUrl: options.portless ? portlessBaseUrl(service.name) : options.baseUrl,
-      seedBaseUrl: service.baseUrl
-    });
-    return { name: service.name, port, baseUrl };
-  });
-}
 function toTokens(config) {
   if (!config.tokens)
     return { test_token_admin: { login: "admin", id: 2, scopes: ["repo", "user", "admin:org", "admin:repo_hook"] } };
@@ -3616,4 +3584,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-Z4EPRPQB.js.map
+//# sourceMappingURL=chunk-MSL5ADSF.js.map

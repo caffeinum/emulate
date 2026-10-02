@@ -942,10 +942,8 @@ function createServer(plugin, options = {}) {
     }
     await next();
   });
-  const dispose = plugin.register(app, store, webhooks, baseUrl, tokenMap);
-  const close = async () => {
-    if (dispose) await dispose();
-  };
+  const close = plugin.register(app, store, webhooks, baseUrl, tokenMap) ?? (async () => {
+  });
   app.notFound(
     (c) => c.json(
       {
@@ -1928,7 +1926,7 @@ var SERVICE_REGISTRY = {
     label: "Vercel REST API emulator",
     endpoints: "projects, deployments, domains, env vars, users, teams, file uploads, protection bypass, blob storage",
     async load() {
-      const mod = await import("./dist-GO7Q3HY3.js");
+      const mod = await import("./dist-TDYEHKI2.js");
       return { plugin: mod.vercelPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -1955,7 +1953,7 @@ var SERVICE_REGISTRY = {
     label: "GitHub REST API emulator",
     endpoints: "users, repos, issues, PRs, comments, reviews, labels, milestones, branches, git data, orgs, teams, releases, webhooks, search, actions, checks, rate limit",
     async load() {
-      const mod = await import("./dist-DDDSC46D.js");
+      const mod = await import("./dist-6HOJGGYL.js");
       return {
         plugin: mod.githubPlugin,
         seedFromConfig: mod.seedFromConfig,
@@ -2019,7 +2017,7 @@ var SERVICE_REGISTRY = {
     label: "Google OAuth 2.0 / OpenID Connect + Gmail, Calendar, and Drive emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, RS256 OIDC discovery and JWKS, token revocation, Gmail messages/drafts/threads/labels/history/settings, Calendar discovery/lists/events/freebusy, Drive files/uploads",
     async load() {
-      const mod = await import("./dist-NKQJAMUU.js");
+      const mod = await import("./dist-CSAYDQIO.js");
       return { plugin: mod.googlePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2101,7 +2099,7 @@ var SERVICE_REGISTRY = {
     label: "Slack API emulator",
     endpoints: "auth, chat, conversations, users, profiles, presence, files, pins, bookmarks, views, reactions, team, OAuth, incoming webhooks, inspector",
     async load() {
-      const mod = await import("./dist-UNBEAPRG.js");
+      const mod = await import("./dist-MR3R7P6U.js");
       return { plugin: mod.slackPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2182,7 +2180,7 @@ var SERVICE_REGISTRY = {
     label: "Apple Sign In / OAuth emulator",
     endpoints: "OAuth authorize, token exchange, JWKS",
     async load() {
-      const mod = await import("./dist-ZPBDOEX4.js");
+      const mod = await import("./dist-LZDZJ6NT.js");
       return { plugin: mod.applePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2207,7 +2205,7 @@ var SERVICE_REGISTRY = {
     label: "Microsoft Entra ID OAuth 2.0 / OpenID Connect emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, OIDC discovery, Graph /me, logout, token revocation",
     async load() {
-      const mod = await import("./dist-GJMSG6EZ.js");
+      const mod = await import("./dist-XR557IF3.js");
       return { plugin: mod.microsoftPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2232,7 +2230,7 @@ var SERVICE_REGISTRY = {
     label: "Okta OAuth 2.0 / OpenID Connect + management API emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo/introspect/revoke/logout, users, groups, apps, authorization servers",
     async load() {
-      const mod = await import("./dist-7LHOQLDZ.js");
+      const mod = await import("./dist-WF35VR6L.js");
       return { plugin: mod.oktaPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2260,7 +2258,7 @@ var SERVICE_REGISTRY = {
     label: "AWS cloud service emulator",
     endpoints: "S3 (buckets, objects), SQS (queues, messages), IAM (users, roles, access keys), STS (assume role, caller identity)",
     async load() {
-      const mod = await import("./dist-WFROWEHG.js");
+      const mod = await import("./dist-TPU46F5J.js");
       return { plugin: mod.awsPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2282,7 +2280,7 @@ var SERVICE_REGISTRY = {
     label: "Resend email API emulator",
     endpoints: "emails with 24-hour Idempotency-Key replay, domains, contacts, API keys, inbox UI",
     async load() {
-      const mod = await import("./dist-LMGVOND5.js");
+      const mod = await import("./dist-BIXXNFKI.js");
       return { plugin: mod.resendPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2299,7 +2297,7 @@ var SERVICE_REGISTRY = {
     label: "Stripe payments emulator",
     endpoints: "customers, payment methods, customer sessions, payment intents, charges, products, prices, checkout sessions, webhooks",
     async load() {
-      const mod = await import("./dist-5WXQYZ7Q.js");
+      const mod = await import("./dist-SNXHPNFU.js");
       return { plugin: mod.stripePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2336,7 +2334,7 @@ var SERVICE_REGISTRY = {
     label: "Clerk authentication and user management emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo, users, email addresses, organizations, memberships, invitations, sessions",
     async load() {
-      const mod = await import("./dist-T6IL3MMW.js");
+      const mod = await import("./dist-EAAQMUXA.js");
       return { plugin: mod.clerkPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2375,7 +2373,7 @@ var SERVICE_REGISTRY = {
     label: "Linear GraphQL API emulator",
     endpoints: "GraphQL, OAuth, issues, teams, users, workflow states, comments, labels, projects, cycles, webhooks, agents, inspector",
     async load() {
-      const mod = await import("./dist-GQN6OZZ2.js");
+      const mod = await import("./dist-QHTJXXNG.js");
       return { plugin: mod.linearPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2440,7 +2438,7 @@ var SERVICE_REGISTRY = {
     label: "Twilio API emulator",
     endpoints: "accounts, API keys, phone numbers, Programmable Messaging, Messaging Services, Verify, Voice, webhooks, simulator, inspector",
     async load() {
-      const mod = await import("./dist-Z24BQHL3.js");
+      const mod = await import("./dist-N3LK2QRW.js");
       return { plugin: mod.twilioPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2496,7 +2494,7 @@ var SERVICE_REGISTRY = {
     label: "Telegram Bot API emulator",
     endpoints: "Bot API at /bot<token>/<method> (messages, media, files, webhooks, getUpdates, forum topics, commands, descriptions), control API, inspector",
     async load() {
-      const mod = await import("./dist-TZMFHJQR.js");
+      const mod = await import("./dist-RETMDOP4.js");
       return { plugin: mod.telegramPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2678,7 +2676,7 @@ async function createBuiltinEmulator(options) {
         seed();
       },
       close() {
-        return closing ??= Promise.all([closePlugin(), closeHttpServer(httpServer)]).then(() => void 0);
+        return closing ??= closePlugin().then(() => closeHttpServer(httpServer));
       }
     };
   } catch (error) {
