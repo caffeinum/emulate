@@ -140,6 +140,10 @@ For access from a container or another machine, use `npx emulate start --host 0.
 
 To control a local emulator from an MCP client, run `npx emulate mcp`. Results remove terminal escapes and redact URL credentials and sensitive query values while preserving clean URLs. See the [MCP server guide](https://emulate.dev/docs/mcp) for client setup and tool behavior.
 
+## Request log and strict tokens
+
+Every built-in service records its recent requests (method, path, query, status, and text bodies up to 10 KB, last 1000) at `GET /_emulate/requests`, so tests can assert what the emulator saw; `DELETE /_emulate/requests` clears it. Set `strict_tokens: true` in a service's seed config to answer unknown tokens with 401 instead of treating them as the default user.
+
 ## Run your app against emulators
 
 Add an `env` block to the config and start your app with `emulate run`. It starts the configured services, runs the command with only the `env` block plus `PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `TMPDIR`, `LANG`, `NODE_OPTIONS`, and `CI`, then stops the services and exits with the command's code.

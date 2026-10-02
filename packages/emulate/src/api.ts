@@ -190,7 +190,7 @@ async function createBuiltinEmulator(options: EmulatorOptions): Promise<Emulator
       ? (appId) => cachedResolver!(appId)
       : undefined;
 
-    const fallbackUser = entry.defaultFallback(svcSeedConfig);
+    const fallbackUser = svcSeedConfig?.strict_tokens === true ? undefined : entry.defaultFallback(svcSeedConfig);
 
     const {
       app,

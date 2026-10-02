@@ -219,7 +219,7 @@ curl "http://localhost:4000/v1/prices?active=true"
 ### Checkout Sessions
 
 ```bash
-# Create checkout session
+# Create checkout session (line_items take a seeded price or inline price_data with product_data)
 curl -X POST http://localhost:4000/v1/checkout/sessions \
   -d "mode=payment" \
   -d "line_items[0][price]=price_xxx" \
