@@ -213,6 +213,7 @@ Slack event callbacks:
     .option("-s, --service <services>", "Comma-separated services to enable")
     .option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration")
     .option("--portless", "Serve over HTTPS via portless (auto-registers aliases)")
+    .option("--scenario <name>", "Overlay scenarios.<name> from the config")
     .passThroughOptions()
     .action(async (command: string[], opts) => {
       process.exitCode = await runCommand({ ...opts, port: Number(opts.port) }, command);

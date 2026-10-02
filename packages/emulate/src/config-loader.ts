@@ -52,7 +52,7 @@ const isRecord = (value: unknown): value is Record<string, any> =>
 export const isBuiltin = (value: string): value is ServiceName => Object.hasOwn(SERVICE_REGISTRY, value);
 
 export async function loadConfig(
-  options: { config?: string; seed?: string; service?: string; cwd?: string } = {},
+  options: { config?: string; seed?: string; service?: string; cwd?: string; scenario?: string } = {},
   onDependenciesChange?: (files: string[]) => void,
 ): Promise<LoadedConfig> {
   if (options.config && options.seed)
@@ -72,6 +72,7 @@ export async function loadConfig(
       } else raw = (await loader.load(path)) as typeof raw;
       if (!isRecord(raw)) throw new Error(`${path} must export a configuration object`);
     }
+    raw = applyScenario(raw, options.scenario);
     const unknown = Object.keys(raw).filter(
       (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env", "prepare", "cleanup"].includes(key),
     );
@@ -181,4 +182,22 @@ export async function loadConfig(
     loader.close();
     throw error;
   }
+}
+
+/** Overlays `scenarios.<name>` onto the config: each top-level section merges one level deep, lists replace. */
+function applyScenario(raw: Record<string, any>, name?: string): Record<string, any> {
+  const { scenarios, ...base } = raw;
+  if (!name) return base;
+  const overlay = isRecord(scenarios) ? scenarios[name] : undefined;
+  if (!isRecord(overlay)) {
+    throw new Error(
+      `Unknown scenario ${name}. Defined: ${isRecord(scenarios) ? Object.keys(scenarios).join(", ") : "none"}`,
+    );
+  }
+  return Object.fromEntries(
+    [...new Set([...Object.keys(base), ...Object.keys(overlay)])].map((key) => [
+      key,
+      isRecord(base[key]) && isRecord(overlay[key]) ? { ...base[key], ...overlay[key] } : (overlay[key] ?? base[key]),
+    ]),
+  );
 }
