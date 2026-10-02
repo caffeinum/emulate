@@ -1,0 +1,36 @@
+README.md
+  h_e9fef506e0f829 37,1288-1314,1610
+THIRD_PARTY_NOTICES.md
+  h_e9fef506e0f829 59-115
+dist/api.d.ts
+  h_e9fef506e0f829 255
+dist/api.js
+  h_e9fef506e0f829 2520-2536
+dist/api.js.map
+  h_e9fef506e0f829 1
+dist/chunk-3X4NXHUT.js
+  h_e9fef506e0f829 21-22,621-637,3643
+dist/chunk-3X4NXHUT.js.map
+  h_e9fef506e0f829 1
+dist/dist-4DSJ5MQD.js
+  h_e9fef506e0f829 1-13262
+dist/dist-4DSJ5MQD.js.map
+  h_e9fef506e0f829 1
+dist/index.js
+  h_e9fef506e0f829 17
+dist/project-worker.js
+  h_e9fef506e0f829 3
+package.json
+  h_e9fef506e0f829 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "eee0c415bc00feb96c3ddadb4c69e8dae436d3f1",
+  "prompts": {},
+  "humans": {
+    "h_e9fef506e0f829": {
+      "author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
