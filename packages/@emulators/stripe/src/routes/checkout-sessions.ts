@@ -27,6 +27,33 @@ function formatSession(s: StripeCheckoutSession, baseUrl: string) {
 export function checkoutSessionRoutes({ app, store, webhooks, baseUrl }: RouteContext): void {
   const ss = getStripeStore(store);
 
+  /** A one-off price for `line_items[][price_data]`, with a product from `product_data` if given. */
+  const inlinePrice = (data: Record<string, unknown>) => {
+    const productData = data.product_data as Record<string, unknown> | undefined;
+    if (typeof data.currency !== "string") return "Missing required param: currency.";
+    if (!data.product && !productData?.name) return "Missing required param: product or product_data[name].";
+    if (data.product && !ss.products.findOneBy("stripe_id", data.product as string))
+      return `No such product: '${data.product}'`;
+    const productId =
+      (data.product as string | undefined) ??
+      ss.products.insert({
+        stripe_id: stripeId("prod"),
+        name: productData!.name as string,
+        description: (productData!.description as string) ?? null,
+        active: true,
+        metadata: (productData!.metadata as Record<string, string>) ?? {},
+      }).stripe_id;
+    return ss.prices.insert({
+      stripe_id: stripeId("price"),
+      product_id: productId,
+      currency: data.currency.toLowerCase(),
+      unit_amount: data.unit_amount === undefined ? null : Number(data.unit_amount),
+      type: data.recurring ? "recurring" : "one_time",
+      active: false,
+      metadata: {},
+    });
+  };
+
   app.post("/v1/checkout/sessions", async (c) => {
     const body = await parseStripeBody(c);
     if (!body.mode)
@@ -59,6 +86,13 @@ export function checkoutSessionRoutes({ app, store, webhooks, baseUrl }: RouteCo
             undefined,
             `line_items[${i}]`,
           );
+        }
+        if (li.price === undefined && li.price_data && typeof li.price_data === "object") {
+          const inline = inlinePrice(li.price_data as Record<string, unknown>);
+          if (typeof inline === "string") {
+            return stripeError(c, 400, "invalid_request_error", inline, undefined, `line_items[${i}][price_data]`);
+          }
+          li.price = inline.stripe_id;
         }
         if (!li.price || typeof li.price !== "string") {
           return stripeError(

@@ -50,7 +50,7 @@ API keys are accepted without checks by default. Set `stripe.strict_scopes: true
 
 ## Checkout Sessions
 
-- `POST /v1/checkout/sessions` — create checkout session
+- `POST /v1/checkout/sessions` — create checkout session (`line_items` take a seeded `price` or inline `price_data` with `product_data`)
 - `GET /v1/checkout/sessions/:id` — retrieve session
 - `POST /v1/checkout/sessions/:id/expire` — expire session
 - `GET /v1/checkout/sessions` — list sessions (filter by `customer`, `status`, `payment_status`)

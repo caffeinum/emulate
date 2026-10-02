@@ -131,3 +131,51 @@ it("runs cleanup after the command with the same env", async () => {
     expect((await readFile(join(dir, "cleaned"), "utf8")).trim()).toMatch(/^http:\/\/localhost:\d+$/);
   });
 });
+
+it("answers 401 for unknown tokens when a service sets strict_tokens", async () => {
+  const { createEmulator } = await import("../api.js");
+  const strict = await createEmulator({
+    service: "github",
+    port: 0,
+    seed: {
+      tokens: { gh_known: { login: "octocat" } },
+      github: { strict_tokens: true, users: [{ login: "octocat" }] },
+    },
+  });
+  const loose = await createEmulator({
+    service: "github",
+    port: 0,
+    seed: { github: { users: [{ login: "octocat" }] } },
+  });
+  try {
+    const user = (url: string, token: string) =>
+      fetch(`${url}/user`, { headers: { Authorization: `Bearer ${token}` } });
+    expect((await user(strict.url, "gh_unknown")).status).toBe(401);
+    expect(await (await user(strict.url, "gh_known")).json()).toMatchObject({ login: "octocat" });
+    expect((await user(loose.url, "gh_unknown")).status).toBe(200);
+  } finally {
+    await Promise.all([strict.close(), loose.close()]);
+  }
+});
+
+it("logs requests as JSON at /_emulate/requests", async () => {
+  const { createEmulator } = await import("../api.js");
+  const stripe = await createEmulator({ service: "stripe", port: 0 });
+  try {
+    await fetch(`${stripe.url}/v1/customers?limit=1`, { headers: { Authorization: "Bearer sk_test" } });
+    await fetch(`${stripe.url}/v1/customers`, {
+      method: "POST",
+      headers: { Authorization: "Bearer sk_test", "Content-Type": "application/x-www-form-urlencoded" },
+      body: "email=a%40b.c",
+    });
+    const log = (await (await fetch(`${stripe.url}/_emulate/requests`)).json()) as Array<Record<string, unknown>>;
+    expect(log).toEqual([
+      expect.objectContaining({ method: "GET", path: "/v1/customers", query: "?limit=1", status: 200 }),
+      expect.objectContaining({ method: "POST", path: "/v1/customers", body: "email=a%40b.c", status: 200 }),
+    ]);
+    expect((await fetch(`${stripe.url}/_emulate/requests`, { method: "DELETE" })).status).toBe(204);
+    expect(await (await fetch(`${stripe.url}/_emulate/requests`)).json()).toEqual([]);
+  } finally {
+    await stripe.close();
+  }
+});
