@@ -149,7 +149,8 @@ env:
   SLACK_SIGNING_SECRET: "{slack.signing_secret}" # any seed value, [n] for list items
   OPENAI_API_KEY: "${OPENAI_API_KEY}"            # from your shell; ${NAME:-default} and $$ also work
   DATABASE_URL: postgres://localhost:5432/app_dev
-prepare: bun run scripts/seed.ts   # runs after the emulators start, before the command, with the same env
+prepare: docker compose up -d --wait && bun run scripts/seed.ts   # after the emulators start, before the command, same env
+cleanup: docker compose down                                       # after the command exits, even on failure
 ```
 
 ```bash
@@ -158,7 +159,7 @@ npx emulate run --portless -- pnpm test
 npx emulate run --port 0 -- bun test   # a free port per service; run ignores PORT, use EMULATE_PORT
 ```
 
-An unknown service, a missing seed value, an unset `${NAME}`, or a failing `prepare` stops the run with an error.
+An unknown service, a missing seed value, an unset `${NAME}`, or a failing `prepare` stops the run with an error. Databases and other containers stay in your compose file; `prepare` and `cleanup` start and stop them around the run.
 
 ## HTTPS with portless
 
