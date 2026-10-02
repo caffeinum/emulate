@@ -14,6 +14,7 @@
     "slack",
     "linear",
     "twilio",
+    "telegram",
     "apple",
     "microsoft",
     "aws",
