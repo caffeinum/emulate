@@ -17,11 +17,9 @@ export interface RegisterOptions {
   baseUrlDerived?: boolean;
 }
 
-export type ServicePluginDisposer = () => Promise<void>;
-
 export interface ServicePlugin {
   name: string;
-  /** May return a disposer that the host awaits when the emulator closes. */
+  /** May return a cleanup the host awaits when the emulator closes. */
   register(
     app: Hono<AppEnv>,
     store: Store,
@@ -29,7 +27,7 @@ export interface ServicePlugin {
     baseUrl: string,
     tokenMap?: TokenMap,
     options?: RegisterOptions,
-  ): void | ServicePluginDisposer;
+  ): void | (() => Promise<void>);
   seed?(store: Store, baseUrl: string): void;
   /** Renders every error core produces for the service (thrown errors, unmatched routes, rate limit and auth rejections) in the service's native format instead of the default GitHub-shaped body. */
   formatError?(error: unknown, c: Context<AppEnv>, status: number): Response | Promise<Response>;

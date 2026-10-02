@@ -1,61 +1,45 @@
 import { spawn } from "node:child_process";
+import { constants } from "node:os";
 import { prepareProject, type ProjectOptions } from "../project-runner.js";
 import { resolveEnv } from "../env-template.js";
-import { ensurePortless, registerAliases, removeAliases, type PortlessAlias } from "../portless.js";
+import { ensurePortless, registerAliases, removeAliases } from "../portless.js";
 
-/**
- * Start the configured emulators, run `command` with the config's env block
- * applied, and shut the emulators down when it exits. Resolves to its exit code.
- */
+/** The only outside variables a command sees besides the config's env block. */
+const PASSTHROUGH = ["PATH", "HOME", "USER", "SHELL", "TERM", "TMPDIR", "LANG", "NODE_OPTIONS", "CI"];
+
+/** Starts the configured emulators, runs `command` with the env block, stops them, and returns its exit code. */
 export async function runCommand(options: ProjectOptions, command: string[]): Promise<number> {
-  if (command.length === 0) throw new Error("Pass the command to run after --, e.g. emulate run -- pnpm dev");
   const run = await prepareProject(options);
-  let aliases: PortlessAlias[] = [];
+  const aliases = options.portless ? run.metadata.aliases : [];
   try {
-    const env = resolveEnv(
-      run.metadata.env,
-      run.metadata.services.map(({ name, url, port, seed }) => ({ name, url, port, seed })),
-    );
-    if (options.portless) {
-      await ensurePortless({ throwOnFailure: true });
-      registerAliases(run.metadata.aliases);
-      aliases = run.metadata.aliases;
-    }
+    const env = resolveEnv(run.metadata.env, run.metadata.services);
+    if (options.portless) await ensurePortless({ throwOnFailure: true });
+    registerAliases(aliases);
     await run.start();
-    console.error(
-      `emulate: ${run.metadata.services.map((service) => `${service.name} ${service.url}`).join(", ")}` +
-        `\nemulate: running ${command.join(" ")} with ${Object.keys(env).length} env variables`,
+    console.error(`emulate: ${run.metadata.services.map((s) => `${s.name} ${s.url}`).join(", ")}`);
+    const outside = Object.fromEntries(
+      PASSTHROUGH.flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : [])),
     );
-    return await runChild(command, env);
+    return await runChild(command, { ...outside, ...env });
   } finally {
-    await run.close().catch((error) => console.error(error));
+    await run.close().catch(console.error);
     removeAliases(aliases);
   }
 }
 
-function runChild(command: string[], env: Record<string, string>): Promise<number> {
+function runChild([file, ...args]: string[], env: Record<string, string>): Promise<number> {
   return new Promise((resolveExit, reject) => {
-    const child = spawn(command[0]!, command.slice(1), {
-      stdio: "inherit",
-      env: { ...process.env, ...env },
-      shell: process.platform === "win32",
-    });
+    const child = spawn(file!, args, { stdio: "inherit", env, shell: process.platform === "win32" });
     const forward = (signal: NodeJS.Signals) => child.kill(signal);
-    process.on("SIGINT", forward);
-    process.on("SIGTERM", forward);
+    process.on("SIGINT", forward).on("SIGTERM", forward);
+    const done = () => process.off("SIGINT", forward).off("SIGTERM", forward);
     child.once("error", (error) => {
-      process.off("SIGINT", forward);
-      process.off("SIGTERM", forward);
-      reject(new Error(`Could not run ${command[0]}: ${error.message}`, { cause: error }));
+      done();
+      reject(new Error(`Could not run ${file}: ${error.message}`, { cause: error }));
     });
     child.once("exit", (code, signal) => {
-      process.off("SIGINT", forward);
-      process.off("SIGTERM", forward);
-      resolveExit(code ?? (signal ? 128 + (signalNumber(signal) ?? 1) : 1));
+      done();
+      resolveExit(code ?? 128 + (signal ? constants.signals[signal] : 0));
     });
   });
-}
-
-function signalNumber(signal: NodeJS.Signals): number | undefined {
-  return { SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGKILL: 9, SIGTERM: 15 }[signal as string];
 }

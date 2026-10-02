@@ -1,4 +1,4 @@
-import type { AppEnv, Hono, ServicePlugin, ServicePluginDisposer, Store, WebhookDispatcher } from "@emulators/core";
+import type { AppEnv, Hono, ServicePlugin, Store, WebhookDispatcher } from "@emulators/core";
 import { renderInspectorPage, renderJsonDetails } from "@emulators/core";
 import { createTestServerBackend } from "./backend/test-server.js";
 import type { TelegramBackendFactory } from "./backend/types.js";
@@ -57,7 +57,7 @@ export function createTelegramPlugin(createBackend: TelegramBackendFactory = cre
   return {
     name: "telegram",
     rateLimit: false,
-    register(app: Hono<AppEnv>, store: Store): ServicePluginDisposer {
+    register(app: Hono<AppEnv>, store: Store) {
       const runtime = new TelegramRuntime(store, createBackend);
 
       app.get("/", async (c) => {
