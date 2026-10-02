@@ -13,7 +13,7 @@ import {
   publishGeneratedSecretsFile,
   registerAliases,
   removeAliases
-} from "./chunk-ZTMZZNEI.js";
+} from "./chunk-Q2KH4IBY.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
@@ -701,7 +701,7 @@ Use the ${name} URL and Inspector link printed by start to send requests and ins
 }
 
 // src/index.ts
-var pkg = { version: "0.12.0" };
+var pkg = { version: "0.12.1" };
 var defaultPort = process.env.EMULATE_PORT ?? process.env.PORT ?? "4000";
 var program = new Command();
 program.name("emulate").description("Local drop-in replacement services for CI and no-network sandboxes").version(pkg.version).addHelpText(
@@ -710,6 +710,12 @@ program.name("emulate").description("Local drop-in replacement services for CI a
 Framework adapters:
   Embed emulators in app routes with @emulators/adapter-next or @emulators/adapter-nuxt.
   Docs: https://emulate.dev/docs/nextjs and https://emulate.dev/docs/nuxt
+
+Networking:
+  Built-in and custom listeners bind to 127.0.0.1 by default.
+  Use --host 0.0.0.0 for access from containers or other machines.
+  createEmulator accepts hostname for the listening address.
+  Use --base-url or baseUrl for advertised URLs reachable by those clients.
 
 Custom emulators:
   Build and share emulators for third-party HTTP APIs alongside the built-in services.
@@ -794,7 +800,7 @@ Slack event callbacks:
   Each logical event has a distinct ID shared across subscriber deliveries.
 `
 );
-program.command("start", { isDefault: true }).description("Start the emulator server").option("-p, --port <port>", "Base port", defaultPort).option("-s, --service <services>", "Comma-separated services to enable").option("--seed <file>", "Path to seed config file").option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration").option("--watch", "Watch imports and fixtures; successful reloads reset state to seed").option("--base-url <url>", "Override advertised base URL (supports {service} template)").option("--portless", "Serve over HTTPS via portless (auto-registers aliases)").option(
+program.command("start", { isDefault: true }).description("Start the emulator server").option("-p, --port <port>", "Base port", defaultPort).option("--host <host>", "Listening address (use 0.0.0.0 for network access)", "127.0.0.1").option("-s, --service <services>", "Comma-separated services to enable").option("--seed <file>", "Path to seed config file").option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration").option("--watch", "Watch imports and fixtures; successful reloads reset state to seed").option("--base-url <url>", "Override advertised base URL (supports {service} template)").option("--portless", "Serve over HTTPS via portless (auto-registers aliases)").option(
   "--generated-secrets-file <path>",
   "Write service-generated secrets to a new owner-only JSON file (Linux requires setfacl and getfacl)"
 ).action(async (opts) => {
@@ -805,6 +811,7 @@ program.command("start", { isDefault: true }).description("Start the emulator se
   }
   const options = {
     port,
+    host: opts.host,
     service: opts.service,
     seed: opts.seed,
     config: opts.config,
