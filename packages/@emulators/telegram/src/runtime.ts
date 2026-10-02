@@ -111,6 +111,15 @@ export interface TelegramWorld {
   seedCallCount: number;
 }
 
+/** Topics are listed under the chat's seed name, or its id for chats created later. */
+export function recordTopic(world: TelegramWorld, chatId: number, name: string, threadId: number): void {
+  (world.ids.topics[topicChatKey(world, chatId)] ??= {})[name] = threadId;
+}
+
+export function topicChatKey(world: TelegramWorld, chatId: number): string {
+  return Object.entries(world.ids.chats).find(([, id]) => id === chatId)?.[0] ?? String(chatId);
+}
+
 export function botIdFromToken(token: string): number {
   const match = /^(\d+):[A-Za-z0-9_-]+$/.exec(token);
   if (!match) throw new Error(`telegram bot token ${token} must look like <numeric id>:<secret>`);
