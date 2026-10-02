@@ -90,6 +90,8 @@ Every built-in service records its recent requests (method, path, query, status,
 
 ## Run your app against emulators
 
+To wire an existing project end to end (inventory env vars, write the config, patch hardcoded hosts), follow the **emulate-setup** skill.
+
 Add an `env` block to the config and start your app with `emulate run`. It starts the configured services, runs the command with only the `env` block plus `PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `TMPDIR`, `LANG`, `NODE_OPTIONS`, and `CI`, then stops the services and exits with the command's code.
 
 ```yaml
