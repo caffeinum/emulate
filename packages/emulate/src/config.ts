@@ -13,12 +13,15 @@ export interface EmulateConfig {
   services: Record<string, ServiceConfig>;
   watch?: string[];
   tokens?: Record<string, { login: string; scopes?: string[] }>;
+  /** App environment variables; values may use templates such as "{github.url}" or "{slack.signing_secret}". */
+  env?: Record<string, string>;
 }
 
 export function defineConfig<Definitions extends Record<string, EmulatorDefinition | string>>(config: {
   services: { [Name in keyof Definitions]: ServiceConfig<Definitions[Name]> };
   watch?: string[];
   tokens?: EmulateConfig["tokens"];
+  env?: EmulateConfig["env"];
 }): typeof config {
   return config;
 }
