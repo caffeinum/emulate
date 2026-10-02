@@ -28,7 +28,8 @@ const MEDIA_TYPES = new Set<TelegramMedia["type"]>([
  * The emulate control API for acting on Telegram's side. Chats and users are
  * referenced by seed name or numeric id.
  */
-export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void {
+/** Registers the control API and returns its routes, for the error an unknown control path gets. */
+export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): string[] {
   const route = (handler: (world: TelegramWorld, c: Context, body: Body) => Promise<unknown>) => async (c: Context) => {
     try {
       const world = await runtime.world();
@@ -41,12 +42,22 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     }
   };
 
-  app.get(
+  const routes: string[] = [];
+  const get = (path: string, handler: (c: Context) => Promise<Response>) => {
+    routes.push(`GET ${path}`);
+    app.get(path, handler);
+  };
+  const post = (path: string, handler: (c: Context) => Promise<Response>) => {
+    routes.push(`POST ${path}`);
+    app.post(path, handler);
+  };
+
+  get(
     "/_telegram/ids",
     route(async (world) => world.ids),
   );
 
-  app.post(
+  post(
     "/_telegram/users",
     route(async (world, _c, body) => {
       const name = requireString(body, "name");
@@ -63,7 +74,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     }),
   );
 
-  app.post(
+  post(
     "/_telegram/chats/:chat/topics",
     route(async (world, c, body) => {
       const chatId = chatRef(world, c.req.param("chat")!);
@@ -76,7 +87,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     }),
   );
 
-  app.post(
+  post(
     "/_telegram/chats/:chat/members",
     route(async (world, c, body) => {
       await world.backend.join(chatRef(world, c.req.param("chat")!), userRef(world, body.user));
@@ -84,7 +95,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     }),
   );
 
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages",
     route(async (world, c, body) => {
       const chatId = chatRef(world, c.req.param("chat")!);
@@ -93,12 +104,12 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     }),
   );
 
-  app.get(
+  get(
     "/_telegram/chats/:chat/messages",
     route(async (world, c) => world.backend.getMessages(chatRef(world, c.req.param("chat")!))),
   );
 
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages/:message/edit",
     route(async (world, c, body) => {
       await world.backend.editMessage(
@@ -111,7 +122,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     }),
   );
 
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages/:message/reactions",
     route(async (world, c, body) => {
       const emoji = body.emoji === null ? null : requireString(body, "emoji");
@@ -125,7 +136,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     }),
   );
 
-  app.post(
+  post(
     "/_telegram/chats/:chat/messages/:message/buttons",
     route(async (world, c, body) =>
       world.backend.pressButton(
@@ -137,7 +148,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     ),
   );
 
-  app.post(
+  post(
     "/_telegram/users/:user/messages",
     route(async (world, c, body) => ({
       message_id: await world.backend.sendDirectMessage(
@@ -147,12 +158,12 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     })),
   );
 
-  app.get(
+  get(
     "/_telegram/users/:user/messages",
     route(async (world, c) => world.backend.getDirectMessages(userRef(world, c.req.param("user")))),
   );
 
-  app.post(
+  post(
     "/_telegram/users/:user/messages/:message/buttons",
     route(async (world, c, body) =>
       world.backend.pressDirectButton(
@@ -163,7 +174,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
     ),
   );
 
-  app.get(
+  get(
     "/_telegram/calls",
     route(async (world) => {
       const { calls, unimplemented } = await world.backend.getCalls();
@@ -173,6 +184,8 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void
       };
     }),
   );
+
+  return routes;
 }
 
 async function readJson(c: Context): Promise<Body> {

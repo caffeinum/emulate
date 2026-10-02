@@ -95,13 +95,16 @@ const ADAPTER_METHODS: Record<string, MethodHandler> = {
 
 export const TELEGRAM_ADAPTER_METHODS = Object.freeze(Object.keys(ADAPTER_METHODS));
 
-export function botApiRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): void {
+export function botApiRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime, controlRoutes: string[]): void {
   for (const httpMethod of ["GET", "POST"]) {
     app.on(httpMethod, "/*", async (c, next) => {
       const path = new URL(c.req.url).pathname;
       const method = BOT_METHOD_PATH.exec(path);
       if (method) return handleBotMethod(c, runtime, decodeURIComponent(method[1]!), method[2]!);
       if (FILE_PATH.test(path)) return proxy(c, await runtime.world(), path);
+      if (path.startsWith("/_telegram/")) {
+        return c.json({ error: `no control route ${httpMethod} ${path}`, routes: controlRoutes }, 404);
+      }
       return next();
     });
   }
