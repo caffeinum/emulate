@@ -803,8 +803,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       telegram-bot-test-server:
-        specifier: 0.9.0
-        version: 0.9.0
+        specifier: github:caffeinum/telegram-bot-test-server#2e1fc7957dd0104d5e67774508aa9a2830dca6d6
+        version: https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/2e1fc7957dd0104d5e67774508aa9a2830dca6d6
     devDependencies:
       grammy:
         specifier: ^1.46.0
@@ -10482,8 +10482,9 @@ packages:
   teex@1.0.1:
     resolution: {integrity: sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==}
 
-  telegram-bot-test-server@0.9.0:
-    resolution: {integrity: sha512-slfVuRoQNQY+TCKGsoYV1Kn8DOFNXAKKkGvfms41AxVDZfahQItpVKgFafPoWdorgaWYtw1iZ1lKb5bTkFG99w==}
+  telegram-bot-test-server@https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/2e1fc7957dd0104d5e67774508aa9a2830dca6d6:
+    resolution: {gitHosted: true, integrity: sha512-k4q+D2wOvK3pTyt+M+Bcb+ERVb+cX7mQLpMKQ2eAcP3YoLAkJ/iSWURPDk660gjSiBY4D4+Jg9qz4dr3R185mQ==, tarball: https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/2e1fc7957dd0104d5e67774508aa9a2830dca6d6}
+    version: 0.9.0
     engines: {node: '>=20'}
     hasBin: true
 
@@ -22652,7 +22653,7 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  telegram-bot-test-server@0.9.0: {}
+  telegram-bot-test-server@https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/2e1fc7957dd0104d5e67774508aa9a2830dca6d6: {}
 
   terser@5.48.0:
     dependencies:
