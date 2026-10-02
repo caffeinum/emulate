@@ -12,8 +12,9 @@ import {
   prepareProject,
   publishGeneratedSecretsFile,
   registerAliases,
-  removeAliases
-} from "./chunk-U2HC2W3Q.js";
+  removeAliases,
+  resolveEnv
+} from "./chunk-QVLC7IGJ.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
@@ -700,10 +701,72 @@ Use the ${name} URL and Inspector link printed by start to send requests and ins
   );
 }
 
+// src/commands/run.ts
+import { spawn } from "child_process";
+async function runCommand(options, command) {
+  if (command.length === 0) throw new Error("Pass the command to run after --, e.g. emulate run -- pnpm dev");
+  const run = await prepareProject(options);
+  let aliases = [];
+  try {
+    const env = resolveEnv(
+      run.metadata.env,
+      run.metadata.services.map(({ name, url, port, seed }) => ({ name, url, port, seed }))
+    );
+    if (options.portless) {
+      await ensurePortless({ throwOnFailure: true });
+      registerAliases(run.metadata.aliases);
+      aliases = run.metadata.aliases;
+    }
+    await run.start();
+    console.error(
+      `emulate: ${run.metadata.services.map((service) => `${service.name} ${service.url}`).join(", ")}
+emulate: running ${command.join(" ")} with ${Object.keys(env).length} env variables`
+    );
+    return await runChild(command, env);
+  } finally {
+    await run.close().catch((error) => console.error(error));
+    removeAliases(aliases);
+  }
+}
+function runChild(command, env) {
+  return new Promise((resolveExit, reject) => {
+    const child = spawn(command[0], command.slice(1), {
+      stdio: "inherit",
+      env: { ...process.env, ...env },
+      shell: process.platform === "win32"
+    });
+    const forward = (signal) => child.kill(signal);
+    process.on("SIGINT", forward);
+    process.on("SIGTERM", forward);
+    child.once("error", (error) => {
+      process.off("SIGINT", forward);
+      process.off("SIGTERM", forward);
+      reject(new Error(`Could not run ${command[0]}: ${error.message}`, { cause: error }));
+    });
+    child.once("exit", (code, signal) => {
+      process.off("SIGINT", forward);
+      process.off("SIGTERM", forward);
+      resolveExit(code ?? (signal ? 128 + (signalNumber(signal) ?? 1) : 1));
+    });
+  });
+}
+function signalNumber(signal) {
+  return { SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGKILL: 9, SIGTERM: 15 }[signal];
+}
+
 // src/index.ts
 var pkg = { version: "0.12.1" };
 var defaultPort = process.env.EMULATE_PORT ?? process.env.PORT ?? "4000";
 var program = new Command();
+program.enablePositionalOptions();
+function parsePort(value) {
+  const port = parseInt(value, 10);
+  if (Number.isNaN(port) || port < 1 || port > 65535) {
+    console.error(`Invalid port: ${value}`);
+    process.exit(1);
+  }
+  return port;
+}
 program.name("emulate").description("Local drop-in replacement services for CI and no-network sandboxes").version(pkg.version).addHelpText(
   "after",
   `
@@ -825,6 +888,24 @@ program.command("start", { isDefault: true }).description("Start the emulator se
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
+  }
+});
+program.command("run").description("Start the configured emulators, run a command with the config's env, then stop them").usage("[options] -- <command...>").argument("<command...>", "Command to run, e.g. pnpm dev").option("-p, --port <port>", "Base port", defaultPort).option("--host <host>", "Listening address (use 0.0.0.0 for network access)", "127.0.0.1").option("-s, --service <services>", "Comma-separated services to enable").option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration").option("--base-url <url>", "Override advertised base URL (supports {service} template)").option("--portless", "Serve over HTTPS via portless (auto-registers aliases)").passThroughOptions().action(async (command, opts) => {
+  try {
+    process.exitCode = await runCommand(
+      {
+        port: parsePort(opts.port),
+        host: opts.host,
+        service: opts.service,
+        config: opts.config,
+        baseUrl: opts.baseUrl,
+        portless: opts.portless
+      },
+      command
+    );
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
   }
 });
 program.command("init").description("Generate a starter config file").option("-s, --service <service>", "Service to generate config for", "all").option("--custom <name>", "Scaffold a third-party API emulator, config, and test").option("--config <file>", "Existing configuration to update when scaffolding a custom API").action((opts) => {

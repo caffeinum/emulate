@@ -234,6 +234,8 @@ interface EmulateConfig {
         login: string;
         scopes?: string[];
     }>;
+    /** App environment variables; values may use templates such as "{github.url}" or "{slack.signing_secret}". */
+    env?: Record<string, string>;
 }
 declare function defineConfig<Definitions extends Record<string, EmulatorDefinition | string>>(config: {
     services: {
@@ -241,6 +243,7 @@ declare function defineConfig<Definitions extends Record<string, EmulatorDefinit
     };
     watch?: string[];
     tokens?: EmulateConfig["tokens"];
+    env?: EmulateConfig["env"];
 }): typeof config;
 
 declare const SERVICE_NAME_LIST: readonly ["vercel", "github", "google", "slack", "apple", "microsoft", "okta", "aws", "resend", "stripe", "mongoatlas", "clerk", "linear", "twilio", "telegram"];
