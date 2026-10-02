@@ -137,31 +137,26 @@ For access from a container or another machine, use `npx emulate start --host 0.
 
 ## Run your app against emulators
 
-`emulate run` starts the services in your config, runs your command with the config's `env` block set, and stops the emulators when the command exits. The config, seed data, and env mapping all live in one committed file, so no wrapper scripts are needed.
+Add an `env` block to the config and start your app with `emulate run`. It starts the configured services, runs the command with only the `env` block plus `PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `TMPDIR`, `LANG`, `NODE_OPTIONS`, and `CI`, then stops the services and exits with the command's code.
 
 ```yaml
-# emulate.config.yaml
 github:
   users: [{ login: octocat }]
 slack:
   signing_secret: local-signing-secret
-
 env:
-  GITHUB_API_URL: "{github.url}"
-  SLACK_API_URL: "{slack.url}/api"
-  SLACK_SIGNING_SECRET: "{slack.signing_secret}"
-  DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_dev
-  OPENAI_API_KEY: "${OPENAI_API_KEY}"      # passthrough from your shell
-  REDIS_URL: "${REDIS_URL:-redis://localhost:6379}"
+  GITHUB_API_URL: "{github.url}"                # also {github.port}, {github.host}
+  SLACK_SIGNING_SECRET: "{slack.signing_secret}" # any seed value, [n] for list items
+  OPENAI_API_KEY: "${OPENAI_API_KEY}"            # from your shell; ${NAME:-default} and $$ also work
+  DATABASE_URL: postgres://localhost:5432/app_dev
 ```
 
 ```bash
 npx emulate run -- pnpm dev
-npx emulate run -- pnpm test               # exits with the command's exit code
-npx emulate run --portless -- pnpm dev     # https://{service}.emulate.localhost URLs
+npx emulate run --portless -- pnpm test
 ```
 
-`{service.url}`, `{service.port}`, and `{service.host}` are where that emulator runs. `{service.some.path}` (with `[n]` for list items) reads a value from that service's seed config. `${NAME}` passes `NAME` through from the environment `emulate run` was started in, failing if it is unset; `${NAME:-default}` falls back to a default, and `$$` writes a literal `$`. Other values, such as a local database URL, pass through unchanged. A template that names an unknown service or a value missing from the seed stops startup with an error rather than guessing. `run` accepts the same `--port`, `--host`, `--service`, `--config`, `--base-url`, and `--portless` options as `start`.
+An unknown service, a missing seed value, or an unset `${NAME}` stops startup with an error.
 
 ## HTTPS with portless
 

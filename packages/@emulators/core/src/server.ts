@@ -90,10 +90,7 @@ export function createServer(plugin: ServicePlugin, options: ServerOptions = {})
     await next();
   });
 
-  const dispose = plugin.register(app, store, webhooks, baseUrl, tokenMap);
-  const close = async () => {
-    if (dispose) await dispose();
-  };
+  const close = plugin.register(app, store, webhooks, baseUrl, tokenMap) ?? (async () => {});
 
   app.notFound((c) =>
     c.json(

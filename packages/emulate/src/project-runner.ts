@@ -29,14 +29,7 @@ export interface RetainedSeed {
   secrets: GeneratedSecretRecord[];
 }
 export interface RunMetadata {
-  services: Array<{
-    name: string;
-    url: string;
-    port: number;
-    source: string;
-    inspectorUrl?: string;
-    seed?: Record<string, unknown>;
-  }>;
+  services: Array<{ name: string; url: string; port: number; source: string; inspectorUrl?: string; seed?: unknown }>;
   env: Record<string, string>;
   dependencies: string[];
   directory: string;
@@ -87,9 +80,22 @@ export async function prepareProject(
       );
   }
   try {
-    const plan = planServices(config, options);
+    const ports = new Set<number>();
     for (const [index, service] of config.services.entries()) {
-      const { port, baseUrl } = plan[index]!;
+      const port = service.port ?? options.port + index;
+      if (!Number.isInteger(port) || port < 1 || port > 65535)
+        throw new Error(`Invalid port for ${service.name}: ${port}`);
+      if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
+      ports.add(port);
+    }
+    for (const [index, service] of config.services.entries()) {
+      const port = service.port ?? options.port + index;
+      const baseUrl = resolveBaseUrl({
+        service: service.name,
+        port,
+        baseUrl: options.portless ? portlessBaseUrl(service.name) : options.baseUrl,
+        seedBaseUrl: service.baseUrl,
+      });
       if (options.portless) metadata.aliases.push({ name: `${service.name}.emulate`, port });
       if (typeof service.emulator === "string") {
         const input = JSON.stringify(service.seed ?? {});
@@ -158,7 +164,7 @@ export async function prepareProject(
           url: baseUrl,
           source: service.source,
           inspectorUrl: runtime.inspectorUrl,
-          seed: service.seed as Record<string, unknown> | undefined,
+          seed: service.seed,
         });
       }
     }
@@ -201,28 +207,6 @@ export async function prepareProject(
     await close().catch((cleanup) => console.error(cleanup));
     throw error;
   }
-}
-
-/** Each service's port and advertised URL, as start would assign them. */
-export function planServices(
-  config: LoadedConfig,
-  options: Pick<ProjectOptions, "port" | "portless" | "baseUrl">,
-): Array<{ name: string; port: number; baseUrl: string }> {
-  const ports = new Set<number>();
-  return config.services.map((service, index) => {
-    const port = service.port ?? options.port + index;
-    if (!Number.isInteger(port) || port < 1 || port > 65535)
-      throw new Error(`Invalid port for ${service.name}: ${port}`);
-    if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
-    ports.add(port);
-    const baseUrl = resolveBaseUrl({
-      service: service.name,
-      port,
-      baseUrl: options.portless ? portlessBaseUrl(service.name) : options.baseUrl,
-      seedBaseUrl: service.baseUrl,
-    });
-    return { name: service.name, port, baseUrl };
-  });
 }
 
 function toTokens(config: LoadedConfig): Record<string, { login: string; id: number; scopes?: string[] }> {
