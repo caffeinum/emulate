@@ -2546,7 +2546,7 @@ import { parseDocument } from "yaml";
 
 // src/project-loader.ts
 import { readFileSync as readFileSync3 } from "fs";
-import { registerHooks, stripTypeScriptTypes } from "module";
+import * as nodeModule from "module";
 import { dirname as dirname4, extname as extname2, isAbsolute as isAbsolute2, join as join3 } from "path";
 import { fileURLToPath as fileURLToPath2, pathToFileURL } from "url";
 import { randomUUID as randomUUID2 } from "crypto";
@@ -2690,7 +2690,7 @@ var ProjectLoader = class {
       if (changed) this.onDependenciesChange?.([...this.dependencies]);
     };
     const owns = (url) => url?.startsWith("file:") && new URL(url).searchParams.get("emulate") === this.id;
-    this.hooks = registerHooks({
+    this.install = () => nodeModule.registerHooks({
       resolve: (specifier, context, nextResolve) => {
         const entry = specifier.startsWith(this.prefix);
         if (!entry && !owns(context.parentURL)) return nextResolve(specifier, context);
@@ -2748,7 +2748,11 @@ var ProjectLoader = class {
           try {
             if (transformTypesAvailable) {
               try {
-                source = stripTypeScriptTypes(source, { mode: "transform", sourceMap: true, sourceUrl: originalURL });
+                source = nodeModule.stripTypeScriptTypes(source, {
+                  mode: "transform",
+                  sourceMap: true,
+                  sourceUrl: originalURL
+                });
               } catch (error) {
                 if (error instanceof TypeError && "code" in error && error.code === "ERR_INVALID_ARG_VALUE" && error.message.includes("options.mode"))
                   transformTypesAvailable = false;
@@ -2756,7 +2760,7 @@ var ProjectLoader = class {
               }
             }
             if (!transformTypesAvailable) {
-              source = stripTypeScriptTypes(source, { mode: "strip", sourceUrl: originalURL });
+              source = nodeModule.stripTypeScriptTypes(source, { mode: "strip", sourceUrl: originalURL });
               const map = {
                 version: 3,
                 sources: [originalURL],
@@ -2766,7 +2770,9 @@ var ProjectLoader = class {
               source += "\n//# sourceMappingURL=data:application/json;base64," + Buffer.from(JSON.stringify(map)).toString("base64");
             }
           } catch (error) {
-            throw new Error(`Cannot load ${file}: ${error instanceof Error ? error.message : error}`, { cause: error });
+            throw new Error(`Cannot load ${file}: ${error instanceof Error ? error.message : error}`, {
+              cause: error
+            });
           }
           if (transformTypesAvailable) {
             source = source.replace(
@@ -2803,9 +2809,11 @@ ${source}`
   prefix = `emulate-project:${this.id}/`;
   cache = /* @__PURE__ */ new Map();
   hooks;
+  install;
   closed = false;
   load(specifier) {
     if (this.closed) return Promise.reject(new Error("Project loader is closed"));
+    this.hooks ??= this.install();
     if (!this.cache.has(specifier))
       this.cache.set(
         specifier,
@@ -2820,7 +2828,7 @@ ${source}`
   close() {
     this.closed = true;
     this.onDependenciesChange = void 0;
-    this.hooks.deregister();
+    this.hooks?.deregister();
     this.cache.clear();
   }
 };
@@ -3584,4 +3592,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-K7HT5QYA.js.map
+//# sourceMappingURL=chunk-IHCYBRGF.js.map
