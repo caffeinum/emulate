@@ -1,0 +1,52 @@
+packages/emulate/src/commands/start.ts
+  s_7f7bb4f6550518::t_5514765b65d7be 162-163
+packages/@emulators/github/src/__tests__/oauth-basic.test.ts
+  s_7f7bb4f6550518::t_f3aa88e10f9a55 45-95
+skills/stripe/SKILL.md
+  s_7f7bb4f6550518::t_69b4a3e7c47c0b 222
+packages/emulate/src/api.ts
+  s_7f7bb4f6550518::t_5514765b65d7be 193
+apps/web/content/docs/configuration.mdx
+  s_7f7bb4f6550518::t_69b4a3e7c47c0b 23-26
+skills/emulate/SKILL.md
+  s_7f7bb4f6550518::t_69b4a3e7c47c0b 87-90
+apps/web/content/docs/stripe.mdx
+  s_7f7bb4f6550518::t_ffa57743c52a99 51
+packages/@emulators/github/src/routes/oauth.ts
+  s_7f7bb4f6550518::t_227b7ca8099a51 233-236
+  s_7f7bb4f6550518::t_55465e4b73fd85 71-84,207-232,237-279,321-322,350,359-384
+  s_7f7bb4f6550518::t_c26973ab56a29c 385
+README.md
+  s_7f7bb4f6550518::t_69b4a3e7c47c0b 141-144
+skills/github/SKILL.md
+  s_7f7bb4f6550518::t_69b4a3e7c47c0b 130-133
+packages/@emulators/core/src/server.ts
+  s_7f7bb4f6550518::t_33a741947cb6bb 93-119
+packages/@emulators/stripe/src/__tests__/stripe.test.ts
+  s_7f7bb4f6550518::t_d3b7ca8daea918 368-382,387-395
+  s_7f7bb4f6550518::t_658b0a75a38942 383-386
+packages/@emulators/stripe/src/routes/checkout-sessions.ts
+  s_7f7bb4f6550518::t_d1c022af97ae1e 30-56,90-95
+  s_7f7bb4f6550518::t_7cc5be4054de16 96
+apps/web/content/docs/github.mdx
+  s_7f7bb4f6550518::t_69b4a3e7c47c0b 54-57
+packages/emulate/src/__tests__/run-command.test.ts
+  s_7f7bb4f6550518::t_8434fdabb7b0f7 134-159
+  s_7f7bb4f6550518::t_fc7a763716a1cb 160-181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "15b12db7c2ccf31e5af35457ff8a92c7ea950942",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
