@@ -1,0 +1,38 @@
+README.md
+  s_7f7bb4f6550518::t_991fe98845e143 152,158,161
+packages/emulate/src/__tests__/run-command.test.ts
+  s_7f7bb4f6550518::t_38d25cd74c600c 98-123
+packages/emulate/src/index.ts
+  s_7f7bb4f6550518::t_443bc9e7bfe909 162
+packages/emulate/src/project-runner.ts
+  s_7f7bb4f6550518::t_f0f73f2638460b 35,65
+  s_7f7bb4f6550518::t_443bc9e7bfe909 9,87-90,92,99,226-234
+  s_7f7bb4f6550518::t_bab6089811e170 235
+packages/emulate/src/commands/run.ts
+  s_7f7bb4f6550518::t_f0f73f2638460b 22,32-34,36-37
+  s_7f7bb4f6550518::t_38d25cd74c600c 20-21,23-25
+packages/emulate/src/config-loader.ts
+  s_7f7bb4f6550518::t_f0f73f2638460b 45,75,96-97,167
+apps/web/content/docs/configuration.mdx
+  s_7f7bb4f6550518::t_991fe98845e143 37,43,46
+skills/emulate/SKILL.md
+  s_7f7bb4f6550518::t_991fe98845e143 101,107,110
+packages/emulate/src/config.ts
+  s_7f7bb4f6550518::t_f0f73f2638460b 18-19,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "99f743d85075ee849b577615a96aea63d9e54079",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
