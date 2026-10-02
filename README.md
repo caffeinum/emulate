@@ -9,6 +9,8 @@
 
 Local drop-in replacement services for CI and no-network sandboxes. Fully stateful, production-fidelity API emulation. Not mocks.
 
+> **This fork (caffeinum/emulate)** ships its installable build on the orphan `dist` branch, which a normal clone does not fetch. Install a build by its dist commit, `bun add github:caffeinum/emulate#<dist-sha>`, and list builds with `git ls-remote https://github.com/caffeinum/emulate dist`. Each dist commit names its source as `source: main@<sha>`.
+
 ## Quick Start
 
 ```bash
