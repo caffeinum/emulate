@@ -28,19 +28,37 @@ export function validateEnvBlock(value: unknown): Record<string, string> {
   return env;
 }
 
-export function resolveEnv(env: Record<string, string>, services: EnvServiceContext[]): Record<string, string> {
+export function resolveEnv(
+  env: Record<string, string>,
+  services: EnvServiceContext[],
+  outside: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
   const byName = new Map(services.map((service) => [service.name, service]));
   const resolved: Record<string, string> = {};
   for (const [name, template] of Object.entries(env)) {
     resolved[name] = template.replace(PLACEHOLDER, (_match, expression: string) =>
-      resolveExpression(name, expression.trim(), byName),
+      resolveExpression(name, expression.trim(), byName, outside),
     );
   }
   return resolved;
 }
 
-function resolveExpression(variable: string, expression: string, services: Map<string, EnvServiceContext>): string {
+function resolveExpression(
+  variable: string,
+  expression: string,
+  services: Map<string, EnvServiceContext>,
+  outside: NodeJS.ProcessEnv,
+): string {
   const [serviceName, ...path] = splitPath(expression);
+  if (serviceName === "env") {
+    const [outsideName, ...rest] = path;
+    if (!outsideName || rest.length > 0) throw new Error(`env.${variable}: write {env.NAME} to pass NAME through`);
+    const value = outside[outsideName];
+    if (value === undefined) {
+      throw new Error(`env.${variable}: {env.${outsideName}} is not set in the environment emulate was started with`);
+    }
+    return value;
+  }
   const service = serviceName ? services.get(serviceName) : undefined;
   if (!service) {
     const known = [...services.keys()].join(", ") || "none";
