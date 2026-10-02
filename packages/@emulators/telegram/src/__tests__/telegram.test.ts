@@ -259,23 +259,56 @@ describe("telegram emulator", () => {
     ).rejects.toThrow();
   });
 
-  describe("known telegram-bot-test-server 0.9.0 gaps (flip to passing when fixed upstream)", () => {
-    it.fails("echoes reply_to_message for reply_parameters on bot sends", async () => {
-      const userMessage = await emu.control("POST", "chats/plain/messages", { from: "bob", text: "q" });
-      const reply = await grammyBot().api.sendMessage(ids.chats.plain, "a", {
-        reply_parameters: { message_id: userMessage.message_id },
-      });
-      expect(reply.reply_to_message?.message_id).toBe(userMessage.message_id);
+  it("formats, replies and threads a sendMessage the way cotal-endpoint-telegram sends it", async () => {
+    const bot = grammyBot();
+    const chatId = ids.chats.team;
+    const thread = ids.topics.team.ideas;
+    const question = await emu.control("POST", "chats/team/messages", { from: "bob", text: "q?", topic: "ideas" });
+
+    const reply = await bot.api.sendMessage(chatId, "<b>Done</b> <code>ok</code>", {
+      parse_mode: "HTML",
+      message_thread_id: thread,
+      reply_parameters: { message_id: question.message_id },
+    });
+    expect(reply).toMatchObject({
+      text: "Done ok",
+      entities: [
+        { type: "bold", offset: 0, length: 4 },
+        { type: "code", offset: 5, length: 2 },
+      ],
+      message_thread_id: thread,
+      reply_to_message: { message_id: question.message_id, text: "q?" },
     });
 
-    it.fails("applies parse_mode to text and entities", async () => {
-      const sent = await grammyBot().api.sendMessage(ids.chats.plain, "<b>bold</b>", { parse_mode: "HTML" });
-      expect(sent.text).toBe("bold");
+    const markdown = await bot.api.sendMessage(chatId, "*v1\\.2* shipped", {
+      parse_mode: "MarkdownV2",
+      reply_to_message_id: question.message_id,
+    } as never);
+    expect(markdown).toMatchObject({
+      text: "v1.2 shipped",
+      entities: [{ type: "bold", offset: 0, length: 4 }],
+      reply_to_message: { message_id: question.message_id },
     });
+    await expect(bot.api.sendMessage(chatId, "v1.2", { parse_mode: "MarkdownV2" })).rejects.toThrow(
+      "can't parse entities",
+    );
 
-    it.fails("keeps file_name and mime_type on uploaded documents", async () => {
-      const doc = await grammyBot().api.sendDocument(ids.chats.plain, new InputFile(Buffer.from("x"), "x.txt"));
-      expect(doc.document?.file_name).toBe("x.txt");
+    const stored = await emu.control("GET", "chats/team/messages");
+    expect(stored.find((m: any) => m.message_id === reply.message_id)).toMatchObject({
+      text: "Done ok",
+      reply_to_message: { message_id: question.message_id },
+    });
+  });
+
+  it("keeps uploaded document names and types", async () => {
+    const doc = await grammyBot().api.sendDocument(ids.chats.plain, new InputFile(Buffer.from("a,b"), "report.csv"), {
+      caption: "<i>weekly</i>",
+      parse_mode: "HTML",
+    });
+    expect(doc).toMatchObject({
+      document: { file_name: "report.csv", mime_type: "text/csv" },
+      caption: "weekly",
+      caption_entities: [{ type: "italic", offset: 0, length: 6 }],
     });
   });
 });
