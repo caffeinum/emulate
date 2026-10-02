@@ -179,3 +179,32 @@ it("logs requests as JSON at /_emulate/requests", async () => {
     await stripe.close();
   }
 });
+
+it("overlays a named scenario before seeding", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const config = [
+    "github:",
+    "  users: [{ login: octocat }]",
+    "env:",
+    '  GH: "{github.url}"',
+    "  MODE: base",
+    "scenarios:",
+    "  onboarded:",
+    "    github:",
+    "      users: [{ login: octocat }, { login: hubot }]",
+    "    env:",
+    "      MODE: onboarded",
+    "",
+  ].join("\n");
+  await inProject(config, async (dir) => {
+    const script = `const res = await fetch(process.env.GH + "/users/hubot");
+      (await import("node:fs")).writeFileSync("out.json", JSON.stringify({ status: res.status, mode: process.env.MODE }));`;
+    const run = (scenario?: string) =>
+      runCommand({ port: 0, scenario }, [process.execPath, "--input-type=module", "-e", script]).then(async () =>
+        JSON.parse(await readFile(join(dir, "out.json"), "utf8")),
+      );
+    expect(await run()).toEqual({ status: 404, mode: "base" });
+    expect(await run("onboarded")).toEqual({ status: 200, mode: "onboarded" });
+    await expect(run("missing")).rejects.toThrow("Unknown scenario missing. Defined: onboarded");
+  });
+});
