@@ -63,20 +63,37 @@ describe("env templates", () => {
     expect(() => resolveEnv({ X: "{slack}" }, services)).toThrow("needs a field");
   });
 
-  it("passes chosen variables through from the outside environment", () => {
+  it("passes chosen variables through from the outside environment, compose style", () => {
     expect(
-      resolveEnv({ KEY: "{env.OPENAI_API_KEY}", MIX: "Bearer {env.TOKEN}" }, services, {
-        OPENAI_API_KEY: "sk-real",
-        TOKEN: "t",
-      }),
+      resolveEnv(
+        {
+          KEY: "${OPENAI_API_KEY}",
+          MIX: "Bearer ${TOKEN}",
+          DB: "${DATABASE_URL:-postgres://localhost:5432/app}",
+          SET: "${TOKEN:-unused}",
+          PASSWORD: "pa$$word",
+          BOTH: "${TOKEN}@{slack.host}",
+        },
+        services,
+        { OPENAI_API_KEY: "sk-real", TOKEN: "t" },
+      ),
     ).toEqual({
       KEY: "sk-real",
       MIX: "Bearer t",
+      DB: "postgres://localhost:5432/app",
+      SET: "t",
+      PASSWORD: "pa$word",
+      BOTH: "t@localhost:4003",
     });
-    expect(() => resolveEnv({ KEY: "{env.MISSING}" }, services, {})).toThrow(
-      "env.KEY: {env.MISSING} is not set in the environment emulate was started with",
+    expect(() => resolveEnv({ KEY: "${MISSING}" }, services, {})).toThrow(
+      "env.KEY: ${MISSING} is not set in the environment emulate was started with",
     );
-    expect(() => resolveEnv({ KEY: "{env}" }, services, {})).toThrow("write {env.NAME}");
+  });
+
+  it("does not re-expand values taken from the outside environment", () => {
+    expect(resolveEnv({ KEY: "${RAW}" }, services, { RAW: "{slack.url} ${OTHER}" })).toEqual({
+      KEY: "{slack.url} ${OTHER}",
+    });
   });
 
   it("validates the env block in config", async () => {
