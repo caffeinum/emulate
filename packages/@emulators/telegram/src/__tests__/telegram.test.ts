@@ -199,6 +199,8 @@ describe("telegram emulator", () => {
     const topic = await bot.api.createForumTopic(chatId, "Release plan", { icon_color: 0xffd67e });
     expect(topic).toMatchObject({ message_thread_id: expect.any(Number), name: "Release plan", icon_color: 0xffd67e });
 
+    expect((await emu.control("GET", "ids")).topics.team).toMatchObject({ "Release plan": topic.message_thread_id });
+    await emu.control("POST", "chats/team/messages", { from: "bob", text: "by name", topic: "Release plan" });
     const inTopic = await bot.api.sendMessage(chatId, "kickoff", { message_thread_id: topic.message_thread_id });
     expect(inTopic).toMatchObject({ message_thread_id: topic.message_thread_id, is_topic_message: true });
 

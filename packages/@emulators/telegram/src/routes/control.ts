@@ -1,6 +1,6 @@
 import type { Context, Hono, AppEnv } from "@emulators/core";
 import { TelegramBackendError, type TelegramMedia, type TelegramPostedMessage } from "../backend/types.js";
-import type { TelegramRuntime, TelegramWorld } from "../runtime.js";
+import { recordTopic, topicChatKey, type TelegramRuntime, type TelegramWorld } from "../runtime.js";
 
 type Body = Record<string, unknown>;
 
@@ -81,8 +81,7 @@ export function controlRoutes(app: Hono<AppEnv>, runtime: TelegramRuntime): stri
       const name = requireString(body, "name");
       const by = body.by === undefined ? await world.backend.chatOwner(chatId) : userRef(world, body.by);
       const threadId = await world.backend.createTopic(chatId, name, by);
-      const chatName = Object.entries(world.ids.chats).find(([, id]) => id === chatId)?.[0];
-      if (chatName) (world.ids.topics[chatName] ??= {})[name] = threadId;
+      recordTopic(world, chatId, name, threadId);
       return { message_thread_id: threadId };
     }),
   );
@@ -229,8 +228,7 @@ function threadRef(world: TelegramWorld, chatId: number, topic: unknown): number
   if (topic === undefined) return undefined;
   if (typeof topic === "number") return topic;
   if (typeof topic !== "string") throw new ControlError(400, "topic must be a thread id or topic name");
-  const chatName = Object.entries(world.ids.chats).find(([, id]) => id === chatId)?.[0];
-  const threadId = chatName ? world.ids.topics[chatName]?.[topic] : undefined;
+  const threadId = world.ids.topics[topicChatKey(world, chatId)]?.[topic];
   if (threadId === undefined) throw new ControlError(404, `unknown topic ${topic}`);
   return threadId;
 }
