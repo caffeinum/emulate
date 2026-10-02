@@ -803,8 +803,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       telegram-bot-test-server:
-        specifier: github:caffeinum/telegram-bot-test-server#ec5b304d21e238f3aae79ab806da858d54f61fb9
-        version: https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/ec5b304d21e238f3aae79ab806da858d54f61fb9
+        specifier: github:caffeinum/telegram-bot-test-server#489c39f8ad567f45526e1db340a56e7f98971859
+        version: https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/489c39f8ad567f45526e1db340a56e7f98971859
     devDependencies:
       grammy:
         specifier: ^1.46.0
@@ -10478,8 +10478,8 @@ packages:
   teex@1.0.1:
     resolution: {integrity: sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==}
 
-  telegram-bot-test-server@https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/ec5b304d21e238f3aae79ab806da858d54f61fb9:
-    resolution: {gitHosted: true, integrity: sha512-+EuRey4LkYZPk6sYNb0iAb/77vClvrvbLpRn/rYjmfGVJn/XoGCs5sfvacq3oNrkrhkwhkVNiSncO6uqh1ho7g==, tarball: https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/ec5b304d21e238f3aae79ab806da858d54f61fb9}
+  telegram-bot-test-server@https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/489c39f8ad567f45526e1db340a56e7f98971859:
+    resolution: {gitHosted: true, integrity: sha512-MtvdPc5bP38EitPd+5vtn8we173mHPdFlynLqHfg3n8xb/FLYt/sJcnpezUOOAgTRdPO5Ckggk4rwpLEFlAuyg==, tarball: https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/489c39f8ad567f45526e1db340a56e7f98971859}
     version: 0.9.0
     engines: {node: '>=20'}
     hasBin: true
@@ -22640,7 +22640,7 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  telegram-bot-test-server@https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/ec5b304d21e238f3aae79ab806da858d54f61fb9: {}
+  telegram-bot-test-server@https://codeload.github.com/caffeinum/telegram-bot-test-server/tar.gz/489c39f8ad567f45526e1db340a56e7f98971859: {}
 
   terser@5.48.0:
     dependencies:

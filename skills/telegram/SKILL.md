@@ -72,7 +72,7 @@ Act as Telegram users. Chats and users are referenced by seed name or numeric id
 | `POST /_telegram/chats/:chat/messages/:id/edit` `{ from, text?, caption? }` | The author edits a message |
 | `POST /_telegram/chats/:chat/messages/:id/reactions` `{ from, emoji }` | Set or clear (`null`) a reaction |
 | `POST /_telegram/chats/:chat/messages/:id/buttons` `{ from, data }` | Press an inline button; resolves with the bot's answerCallbackQuery |
-| `POST /_telegram/users/:user/messages` `{ text }` | A user messages the bot directly |
+| `POST /_telegram/users/:user/messages` `{ text?, caption?, reply_to?, media? }` | A user messages the bot directly, with text or media |
 | `POST /_telegram/users/:user/messages/:id/buttons` `{ data }` | Press a button in the private chat |
 | `GET /_telegram/chats/:chat/messages`, `GET /_telegram/users/:user/messages` | Messages, newest first |
 | `GET /_telegram/calls` | Bot API calls made since seeding, and unimplemented methods called |
