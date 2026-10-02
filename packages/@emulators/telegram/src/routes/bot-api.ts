@@ -1,6 +1,6 @@
 import type { Context, Hono, AppEnv } from "@emulators/core";
 import { TelegramBackendError } from "../backend/types.js";
-import type { TelegramRuntime, TelegramWorld } from "../runtime.js";
+import { recordTopic, type TelegramRuntime, type TelegramWorld } from "../runtime.js";
 
 type Params = Record<string, unknown>;
 type MethodHandler = (world: TelegramWorld, botId: number, params: Params) => Promise<unknown>;
@@ -46,6 +46,7 @@ const ADAPTER_METHODS: Record<string, MethodHandler> = {
     const name = requireString(params, "name");
     const owner = await backendCall(() => world.backend.chatOwner(chatId));
     const threadId = await backendCall(() => world.backend.createTopic(chatId, name, owner));
+    recordTopic(world, chatId, name, threadId);
     const iconColor = params.icon_color === undefined ? DEFAULT_TOPIC_ICON_COLOR : Number(params.icon_color);
     const iconCustomEmojiId = optionalString(params, "icon_custom_emoji_id");
     world.topicMeta.set(topicKey(chatId, threadId), {
