@@ -1,0 +1,88 @@
+README.md
+  h_e9fef506e0f829 18,124,133-134,257,261-262
+dist/api.d.ts
+  h_e9fef506e0f829 259-260,280-281
+dist/api.js
+  h_e9fef506e0f829 533,1931,1958,2022,2104,2185,2210,2235,2263,2285,2302,2339,2378,2443,2499,2553-2554,2619-2620
+dist/api.js.map
+  h_e9fef506e0f829 1
+dist/chunk-Q2KH4IBY.js
+  h_e9fef506e0f829 29,56,120,202,283,308,333,361,383,400,437,476,541,597,1162,3474,3530
+dist/chunk-Q2KH4IBY.js.map
+  h_e9fef506e0f829 1
+dist/dist-5WXQYZ7Q.js
+  h_e9fef506e0f829 1419
+dist/dist-5WXQYZ7Q.js.map
+  h_e9fef506e0f829 1
+dist/dist-7LHOQLDZ.js
+  h_e9fef506e0f829 2110
+dist/dist-7LHOQLDZ.js.map
+  h_e9fef506e0f829 1
+dist/dist-DDDSC46D.js
+  h_e9fef506e0f829 12464
+dist/dist-DDDSC46D.js.map
+  h_e9fef506e0f829 1
+dist/dist-GJMSG6EZ.js
+  h_e9fef506e0f829 1019
+dist/dist-GJMSG6EZ.js.map
+  h_e9fef506e0f829 1
+dist/dist-GO7Q3HY3.js
+  h_e9fef506e0f829 3187
+dist/dist-GO7Q3HY3.js.map
+  h_e9fef506e0f829 1
+dist/dist-GQN6OZZ2.js
+  h_e9fef506e0f829 14204
+dist/dist-GQN6OZZ2.js.map
+  h_e9fef506e0f829 1
+dist/dist-LMGVOND5.js
+  h_e9fef506e0f829 1043
+dist/dist-LMGVOND5.js.map
+  h_e9fef506e0f829 1
+dist/dist-NKQJAMUU.js
+  h_e9fef506e0f829 4229
+dist/dist-NKQJAMUU.js.map
+  h_e9fef506e0f829 1
+dist/dist-T6IL3MMW.js
+  h_e9fef506e0f829 1911
+dist/dist-T6IL3MMW.js.map
+  h_e9fef506e0f829 1
+dist/dist-UNBEAPRG.js
+  h_e9fef506e0f829 5090
+dist/dist-UNBEAPRG.js.map
+  h_e9fef506e0f829 1
+dist/dist-WFROWEHG.js
+  h_e9fef506e0f829 1685
+dist/dist-WFROWEHG.js.map
+  h_e9fef506e0f829 1
+dist/dist-Y3YFGOKZ.js
+  h_e9fef506e0f829 6306
+dist/dist-Y3YFGOKZ.js.map
+  h_e9fef506e0f829 1
+dist/dist-Z24BQHL3.js
+  h_e9fef506e0f829 2299
+dist/dist-Z24BQHL3.js.map
+  h_e9fef506e0f829 1
+dist/dist-ZPBDOEX4.js
+  h_e9fef506e0f829 788
+dist/dist-ZPBDOEX4.js.map
+  h_e9fef506e0f829 1
+dist/index.js
+  h_e9fef506e0f829 16,704,714-719,803,814
+dist/index.js.map
+  h_e9fef506e0f829 1
+dist/project-worker.js
+  h_e9fef506e0f829 3
+package.json
+  h_e9fef506e0f829 3,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ccc4834356541244a869eaa98c70faebfa540fcf",
+  "prompts": {},
+  "humans": {
+    "h_e9fef506e0f829": {
+      "author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
