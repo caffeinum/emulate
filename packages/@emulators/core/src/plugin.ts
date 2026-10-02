@@ -11,19 +11,17 @@ export interface RouteContext {
   tokenMap?: TokenMap;
 }
 
-export type ServicePluginDisposer = () => Promise<void>;
-
 export interface ServicePlugin {
   name: string;
   /** Set to false for APIs that authenticate in the path and have no rate limit of their own. */
   rateLimit?: boolean;
-  /** May return a disposer that the host awaits when the emulator closes. */
+  /** May return a cleanup the host awaits when the emulator closes. */
   register(
     app: Hono<AppEnv>,
     store: Store,
     webhooks: WebhookDispatcher,
     baseUrl: string,
     tokenMap?: TokenMap,
-  ): void | ServicePluginDisposer;
+  ): void | (() => Promise<void>);
   seed?(store: Store, baseUrl: string): void;
 }
