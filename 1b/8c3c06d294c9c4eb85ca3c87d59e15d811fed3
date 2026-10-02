@@ -1,0 +1,21 @@
+skills/emulate-setup/SKILL.md
+  s_7f7bb4f6550518::t_de1d2d1cd05317 1-54
+skills/emulate/SKILL.md
+  s_7f7bb4f6550518::t_2dccb5fb63aa5b 93-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1b8c3c06d294c9c4eb85ca3c87d59e15d811fed3",
+  "prompts": {},
+  "sessions": {
+    "s_7f7bb4f6550518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "586409a3-c357-471e-b5b6-7905991cbf44",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aleksey Bykhun <theisease@gmail.com>"
+    }
+  }
+}
