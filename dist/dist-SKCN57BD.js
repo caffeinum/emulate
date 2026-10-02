@@ -5,7 +5,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/owner.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_e02bc4cb38ae96e5217d7463d9f50e79/node_modules/telegram-bot-test-server/src/owner.js
 var MUTE_FOREVER = 2147483647;
 var CHANNEL_PEER_OFFSET = 1e12;
 var KINDS = /* @__PURE__ */ new Set(["private", "bot", "group", "supergroup", "channel"]);
@@ -961,7 +961,7 @@ function camel(name) {
   return name.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase());
 }
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/formatting.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_e02bc4cb38ae96e5217d7463d9f50e79/node_modules/telegram-bot-test-server/src/formatting.js
 var FormattingError = class extends Error {
 };
 var utf8Length = (text) => Buffer.byteLength(text, "utf8");
@@ -1419,7 +1419,7 @@ function formatText(text, { parseMode, entities, detect }) {
   };
 }
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/index.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_e02bc4cb38ae96e5217d7463d9f50e79/node_modules/telegram-bot-test-server/src/index.js
 import http from "http";
 import {
   createHash,
@@ -1429,7 +1429,7 @@ import {
   timingSafeEqual
 } from "crypto";
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/owner-client.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_e02bc4cb38ae96e5217d7463d9f50e79/node_modules/telegram-bot-test-server/src/owner-client.js
 var ownerApi = Object.freeze({
   messages: Object.freeze({
     GetDialogFilters: class GetDialogFilters {
@@ -1441,7 +1441,7 @@ var ownerApi = Object.freeze({
   })
 });
 
-// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_223b5c1a266d6e173d2ab3be3a2b61b4/node_modules/telegram-bot-test-server/src/index.js
+// ../../node_modules/.pnpm/telegram-bot-test-server@https+++codeload.github.com+caffeinum+telegram-bot-test-server_e02bc4cb38ae96e5217d7463d9f50e79/node_modules/telegram-bot-test-server/src/index.js
 var PERMISSION_KEYS = Object.freeze([
   "can_send_messages",
   "can_send_audios",
@@ -1732,6 +1732,35 @@ function readBody(request) {
     request.on("end", () => resolve(Buffer.concat(chunks)));
     request.on("error", reject);
   });
+}
+function postedMessageBody(message) {
+  return typeof message === "string" ? { text: message } : {
+    ...message.text !== void 0 ? { text: message.text } : {},
+    ...message.photo ? {
+      photo_base64: Buffer.from(message.photo).toString("base64")
+    } : {},
+    ...message.media ? {
+      media: {
+        type: message.media.type,
+        base64: Buffer.from(message.media.bytes ?? []).toString(
+          "base64"
+        ),
+        ...message.media.fileName ? { file_name: message.media.fileName } : {},
+        ...message.media.mimeType ? { mime_type: message.media.mimeType } : {}
+      }
+    } : {},
+    ...message.forwardFrom ? {
+      forward_from: {
+        ...message.forwardFrom.userId != null ? { user_id: message.forwardFrom.userId } : {},
+        ...message.forwardFrom.chatId != null ? { chat_id: message.forwardFrom.chatId } : {},
+        ...message.forwardFrom.messageId != null ? { message_id: message.forwardFrom.messageId } : {},
+        ...message.forwardFrom.senderName ? { sender_name: message.forwardFrom.senderName } : {}
+      }
+    } : {},
+    ...message.caption ? { caption: message.caption } : {},
+    ...message.replyTo != null ? { reply_to: message.replyTo } : {},
+    ...message.threadId != null ? { message_thread_id: message.threadId } : {}
+  };
 }
 async function startTestServer({
   port = 0,
@@ -4045,14 +4074,7 @@ async function startTestServer({
       }
       const chat = messageChat(id);
       if (method === "POST" && !subId) {
-        const text = String(body.text ?? "");
-        const entities = messageEntities(text);
-        const message = addMessage(chat, requireUser(id), {
-          text,
-          ...entities.length > 0 ? { entities } : {}
-        });
-        await emit("message", message);
-        return { message_id: message.message_id };
+        return post(chat, { ...body, user_id: Number(id) });
       }
     }
     if (resource === "chats" && id && sub === "albums" && method === "POST") {
@@ -4404,7 +4426,7 @@ async function startTestServer({
       );
     }
     const permission = type === "photo" ? "can_send_photos" : type ? MEMBER_MEDIA[type].permission : "can_send_messages";
-    if (!canPost(chat, userId, permission)) {
+    if (chat.type !== "private" && !canPost(chat, userId, permission)) {
       throw new TelegramError(403, "CHAT_WRITE_FORBIDDEN");
     }
     const fields = {};
@@ -5112,33 +5134,7 @@ ${buttons}
     }),
     leave: (chatId, userId) => act("POST", `chats/${chatId}/leave`, { user_id: userId }),
     post: async (chatId, userId, message) => {
-      const fields = typeof message === "string" ? { text: message } : {
-        ...message.text !== void 0 ? { text: message.text } : {},
-        ...message.photo ? {
-          photo_base64: Buffer.from(message.photo).toString("base64")
-        } : {},
-        ...message.media ? {
-          media: {
-            type: message.media.type,
-            base64: Buffer.from(message.media.bytes ?? []).toString(
-              "base64"
-            ),
-            ...message.media.fileName ? { file_name: message.media.fileName } : {},
-            ...message.media.mimeType ? { mime_type: message.media.mimeType } : {}
-          }
-        } : {},
-        ...message.forwardFrom ? {
-          forward_from: {
-            ...message.forwardFrom.userId != null ? { user_id: message.forwardFrom.userId } : {},
-            ...message.forwardFrom.chatId != null ? { chat_id: message.forwardFrom.chatId } : {},
-            ...message.forwardFrom.messageId != null ? { message_id: message.forwardFrom.messageId } : {},
-            ...message.forwardFrom.senderName ? { sender_name: message.forwardFrom.senderName } : {}
-          }
-        } : {},
-        ...message.caption ? { caption: message.caption } : {},
-        ...message.replyTo != null ? { reply_to: message.replyTo } : {},
-        ...message.threadId != null ? { message_thread_id: message.threadId } : {}
-      };
+      const fields = postedMessageBody(message);
       return (await act("POST", `chats/${chatId}/messages`, {
         user_id: userId,
         ...fields
@@ -5166,7 +5162,7 @@ ${buttons}
       user_id: userId,
       data
     }),
-    sendDirectMessage: async (userId, text) => (await act("POST", `users/${userId}/dm`, { text })).message_id,
+    sendDirectMessage: async (userId, message) => (await act("POST", `users/${userId}/dm`, postedMessageBody(message))).message_id,
     postGuestBotReply: async (chatId, callerUserId, botUsername2, text) => (await act("POST", `chats/${chatId}/guest-bot-reply`, {
       caller_user_id: callerUserId,
       bot_username: botUsername2,
@@ -5580,22 +5576,8 @@ var createTestServerBackend = async (primaryBot) => {
       if (!creator) throw new Error(`telegram chat ${chatId} has no creator`);
       return creator.user_id;
     },
-    post: (chatId, userId, message) => server.post(chatId, userId, {
-      text: message.text,
-      caption: message.caption,
-      replyTo: message.reply_to,
-      threadId: message.thread_id,
-      ...message.media?.type === "photo" ? { photo: message.media.bytes } : {},
-      ...message.media && message.media.type !== "photo" ? {
-        media: {
-          type: message.media.type,
-          bytes: message.media.bytes,
-          fileName: message.media.file_name,
-          mimeType: message.media.mime_type
-        }
-      } : {}
-    }),
-    sendDirectMessage: (userId, text) => server.sendDirectMessage(userId, text),
+    post: (chatId, userId, message) => server.post(chatId, userId, postedMessage(message)),
+    sendDirectMessage: (userId, message) => server.sendDirectMessage(userId, postedMessage(message)),
     async editMessage(chatId, messageId, userId, edit) {
       await server.editMessage(chatId, messageId, userId, edit);
     },
@@ -5611,6 +5593,17 @@ var createTestServerBackend = async (primaryBot) => {
   };
   return refusalsAsBackendErrors(backend);
 };
+function postedMessage(message) {
+  const { media } = message;
+  return {
+    text: message.text,
+    caption: message.caption,
+    replyTo: message.reply_to,
+    threadId: message.thread_id,
+    ...media?.type === "photo" ? { photo: media.bytes } : {},
+    ...media && media.type !== "photo" ? { media: { type: media.type, bytes: media.bytes, fileName: media.file_name, mimeType: media.mime_type } } : {}
+  };
+}
 function refusalsAsBackendErrors(backend) {
   const wrapped = { origin: backend.origin };
   for (const key of Object.keys(backend)) {
@@ -5944,7 +5937,7 @@ function controlRoutes(app, runtime) {
     "/_telegram/chats/:chat/messages",
     route(async (world, c, body) => {
       const chatId = chatRef(world, c.req.param("chat"));
-      const messageId = await world.backend.post(chatId, userRef(world, body.from), postedMessage(world, chatId, body));
+      const messageId = await world.backend.post(chatId, userRef(world, body.from), postedMessage2(world, chatId, body));
       return { message_id: messageId };
     })
   );
@@ -5993,7 +5986,7 @@ function controlRoutes(app, runtime) {
     route(async (world, c, body) => ({
       message_id: await world.backend.sendDirectMessage(
         userRef(world, c.req.param("user")),
-        requireString2(body, "text")
+        postedMessage2(world, void 0, body)
       )
     }))
   );
@@ -6032,7 +6025,7 @@ async function readJson(c) {
   }
   return body;
 }
-function postedMessage(world, chatId, body) {
+function postedMessage2(world, chatId, body) {
   const media = body.media === void 0 ? void 0 : mediaRef(body.media);
   const text = optionalString2(body, "text");
   if (text === void 0 && !media) throw new ControlError(400, "message needs text or media");
@@ -6040,7 +6033,7 @@ function postedMessage(world, chatId, body) {
     text,
     caption: optionalString2(body, "caption"),
     reply_to: body.reply_to === void 0 ? void 0 : integer(body.reply_to, "reply_to"),
-    thread_id: threadRef(world, chatId, body.topic),
+    thread_id: chatId === void 0 ? void 0 : threadRef(world, chatId, body.topic),
     media
   };
 }
@@ -6329,4 +6322,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-RETMDOP4.js.map
+//# sourceMappingURL=dist-SKCN57BD.js.map
