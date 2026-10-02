@@ -365,6 +365,34 @@ describe("Stripe plugin", () => {
   });
 
   describe("checkout sessions", () => {
+    it("creates a session from inline price_data, form-encoded as the Stripe SDK sends it", async () => {
+      const form = new URLSearchParams({
+        mode: "payment",
+        success_url: "https://example.com/success",
+        "line_items[0][quantity]": "2",
+        "line_items[0][price_data][currency]": "USD",
+        "line_items[0][price_data][unit_amount]": "1500",
+        "line_items[0][price_data][product_data][name]": "Pro plan",
+      });
+      const res = await app.request(`${base}/v1/checkout/sessions`, {
+        method: "POST",
+        headers: { ...auth(), "Content-Type": "application/x-www-form-urlencoded" },
+        body: form.toString(),
+      });
+      expect(res.status).toBe(200);
+      const session = (await res.json()) as { url: string };
+      const page = await (await app.request(session.url.replace(/^https?:\/\/[^/]+/, base))).text();
+      expect(page).toContain("Pro plan");
+      expect(page).toMatch(/30\.00/);
+
+      const missing = await app.request(`${base}/v1/checkout/sessions`, {
+        method: "POST",
+        headers: auth(),
+        body: JSON.stringify({ mode: "payment", line_items: [{ quantity: 1, price_data: { unit_amount: 1 } }] }),
+      });
+      expect(missing.status).toBe(400);
+    });
+
     it("creates and expires a checkout session", async () => {
       const createRes = await app.request(`${base}/v1/checkout/sessions`, {
         method: "POST",

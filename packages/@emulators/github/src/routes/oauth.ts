@@ -68,6 +68,20 @@ function getPendingCodeIfValid(store: Store, code: string): PendingCode | undefi
 
 const SERVICE_LABEL = "GitHub";
 
+const DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
+const DEVICE_CODE_TTL_S = 900;
+
+type DeviceCode = { userCode: string; clientId: string; scope: string; expiresAt: number; login?: string };
+
+function getDeviceCodes(store: Store): Map<string, DeviceCode> {
+  let map = store.getData<Map<string, DeviceCode>>("github.oauth.deviceCodes");
+  if (!map) {
+    map = new Map();
+    store.setData("github.oauth.deviceCodes", map);
+  }
+  return map;
+}
+
 export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): void {
   const gh = getGitHubStore(store);
 
@@ -190,6 +204,79 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
     return c.redirect(target, 302);
   });
 
+  // ---------- Device flow ----------
+
+  app.post("/login/device/code", async (c) => {
+    const body = (await c.req.parseBody()) as Record<string, string>;
+    const clientId = String(body.client_id ?? "");
+    if (gh.oauthApps.all().length > 0 && !gh.oauthApps.findOneBy("client_id", clientId)) {
+      return c.json({ error: "incorrect_client_credentials", error_description: "The client_id is not valid." }, 401);
+    }
+    const deviceCode = randomBytes(20).toString("hex");
+    const letters = randomBytes(8).map((byte) => "BCDFGHJKLMNPQRSTVWXZ".charCodeAt(byte % 20));
+    const userCode = `${Buffer.from(letters.subarray(0, 4)).toString()}-${Buffer.from(letters.subarray(4)).toString()}`;
+    getDeviceCodes(store).set(deviceCode, {
+      userCode,
+      clientId,
+      scope: String(body.scope ?? ""),
+      expiresAt: Date.now() + DEVICE_CODE_TTL_S * 1000,
+    });
+    const result = {
+      device_code: deviceCode,
+      user_code: userCode,
+      verification_uri: `${baseUrl}/login/device`,
+      expires_in: DEVICE_CODE_TTL_S,
+      interval: 5,
+    };
+    if ((c.req.header("Accept") ?? "").includes("application/json")) return c.json(result);
+    c.header("Content-Type", "application/x-www-form-urlencoded");
+    return c.body(
+      new URLSearchParams(Object.fromEntries(Object.entries(result).map(([k, v]) => [k, String(v)]))).toString(),
+      200,
+    );
+  });
+
+  /** Where the user enters the code and picks the seeded account that approves it. */
+  app.get("/login/device", (c) => {
+    const userCode = (c.req.query("user_code") ?? "").toUpperCase();
+    const users = [...gh.users.all()].sort((a, b) => a.login.localeCompare(b.login));
+    const body = users
+      .map((u) =>
+        renderUserButton({
+          letter: (u.login[0] ?? "?").toUpperCase(),
+          login: u.login,
+          name: u.name ?? undefined,
+          email: u.email ?? undefined,
+          formAction: "/login/device",
+          hiddenFields: { login: u.login, user_code: userCode },
+        }),
+      )
+      .join("\n");
+    return c.html(
+      renderCardPage(
+        "Device activation",
+        userCode
+          ? `Approve code <strong>${escapeHtml(userCode)}</strong> as:`
+          : "Open this page with ?user_code=XXXX-XXXX.",
+        body,
+        SERVICE_LABEL,
+      ),
+    );
+  });
+
+  app.post("/login/device", async (c) => {
+    const body = (await c.req.parseBody()) as Record<string, string>;
+    const userCode = String(body.user_code ?? "").toUpperCase();
+    const device = [...getDeviceCodes(store).values()].find((d) => d.userCode === userCode && d.expiresAt > Date.now());
+    if (!device)
+      return c.html(renderErrorPage("Code not found", "The code is incorrect or expired.", SERVICE_LABEL), 404);
+    if (!gh.users.findOneBy("login", String(body.login ?? ""))) {
+      return c.html(renderErrorPage("User not found", "Pick a seeded user.", SERVICE_LABEL), 400);
+    }
+    device.login = String(body.login);
+    return c.html(renderCardPage("Device activated", "You can return to your device.", "", SERVICE_LABEL));
+  });
+
   // ---------- Token exchange ----------
 
   app.post("/login/oauth/access_token", async (c) => {
@@ -231,7 +318,8 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
       }
     }
 
-    const code = String(raw.code ?? "");
+    let code = String(raw.code ?? "");
+    const deviceGrant = raw.grant_type === DEVICE_GRANT;
     const bodyClientId = String(raw.client_id ?? "");
     const bodyClientSecret = String(raw.client_secret ?? "").slice(0, 4) + "****";
 
@@ -259,13 +347,40 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
         debug("github.oauth", `[OAuth token] REJECTED: client_id not found in oauthApps`);
         return incorrectClientCredentials();
       }
-      if (!constantTimeSecretEqual(actualSecret, oauthApp.client_secret)) {
+      if (!deviceGrant && !constantTimeSecretEqual(actualSecret, oauthApp.client_secret)) {
         debug("github.oauth", `[OAuth token] REJECTED: client_secret mismatch`);
         return incorrectClientCredentials();
       }
       debug("github.oauth", `[OAuth token] client credentials OK (app: ${oauthApp.name})`);
     } else {
       debug("github.oauth", `[OAuth token] no oauth apps configured, skipping client validation`);
+    }
+
+    if (deviceGrant) {
+      const deviceCode = String(raw.device_code ?? "");
+      const device = getDeviceCodes(store).get(deviceCode);
+      if (!device || device.clientId !== bodyClientId) {
+        return c.json({ error: "incorrect_device_code", error_description: "The device_code provided is not valid." });
+      }
+      if (device.expiresAt <= Date.now()) {
+        getDeviceCodes(store).delete(deviceCode);
+        return c.json({ error: "expired_token", error_description: "The device_code has expired." });
+      }
+      if (!device.login) {
+        return c.json({
+          error: "authorization_pending",
+          error_description: "The authorization request is still pending.",
+        });
+      }
+      getDeviceCodes(store).delete(deviceCode);
+      code = randomBytes(20).toString("hex");
+      getPendingCodes(store).set(code, {
+        login: device.login,
+        scope: device.scope,
+        redirectUri: "",
+        clientId: device.clientId,
+        created_at: Date.now(),
+      });
     }
 
     const pending = getPendingCodeIfValid(store, code);

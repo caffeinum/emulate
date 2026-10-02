@@ -90,6 +90,33 @@ export function createServer(plugin: ServicePlugin, options: ServerOptions = {})
     await next();
   });
 
+  // A JSON log of recent requests so tests can assert what the emulator saw.
+  const requests: Array<{ at: string; method: string; path: string; query: string; status: number; body?: string }> =
+    [];
+  app.get("/_emulate/requests", (c) => c.json(requests));
+  app.delete("/_emulate/requests", (c) => {
+    requests.length = 0;
+    return c.body(null, 204);
+  });
+  const handle = app.fetch;
+  app.fetch = async (request) => {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/_emulate/")) return handle(request);
+    const textual = !/multipart|octet-stream/.test(request.headers.get("Content-Type") ?? "");
+    const body = request.body && textual ? (await request.clone().text()).slice(0, 10_000) : undefined;
+    const response = await handle(request);
+    requests.push({
+      at: new Date().toISOString(),
+      method: request.method,
+      path: url.pathname,
+      query: url.search,
+      status: response.status,
+      ...(body ? { body } : {}),
+    });
+    if (requests.length > 1000) requests.shift();
+    return response;
+  };
+
   const close = plugin.register(app, store, webhooks, baseUrl, tokenMap) ?? (async () => {});
 
   app.notFound((c) =>
