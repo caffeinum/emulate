@@ -149,14 +149,16 @@ env:
   SLACK_SIGNING_SECRET: "{slack.signing_secret}" # any seed value, [n] for list items
   OPENAI_API_KEY: "${OPENAI_API_KEY}"            # from your shell; ${NAME:-default} and $$ also work
   DATABASE_URL: postgres://localhost:5432/app_dev
+prepare: bun run scripts/seed.ts   # runs after the emulators start, before the command, with the same env
 ```
 
 ```bash
 npx emulate run -- pnpm dev
 npx emulate run --portless -- pnpm test
+npx emulate run --port 0 -- bun test   # a free port per service; run ignores PORT, use EMULATE_PORT
 ```
 
-An unknown service, a missing seed value, or an unset `${NAME}` stops startup with an error.
+An unknown service, a missing seed value, an unset `${NAME}`, or a failing `prepare` stops the run with an error.
 
 ## HTTPS with portless
 

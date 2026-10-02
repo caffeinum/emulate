@@ -2539,6 +2539,9 @@ async function createCustomRuntime(definition, options = {}) {
   return runtime;
 }
 
+// src/project-runner.ts
+import { createServer as createNetServer } from "net";
+
 // src/config-loader.ts
 import { existsSync as existsSync2, readFileSync as readFileSync4 } from "fs";
 import { dirname as dirname5, resolve as resolve2, extname as extname3 } from "path";
@@ -2925,7 +2928,7 @@ async function loadConfig(options = {}, onDependenciesChange) {
       if (!isRecord(raw)) throw new Error(`${path} must export a configuration object`);
     }
     const unknown = Object.keys(raw).filter(
-      (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env"].includes(key)
+      (key) => ![...SERVICE_NAMES, "services", "tokens", "watch", "env", "prepare"].includes(key)
     );
     if (unknown.length)
       throw new Error(`Unknown config key: ${unknown.join(", ")}. Register custom APIs under services.`);
@@ -2938,6 +2941,8 @@ async function loadConfig(options = {}, onDependenciesChange) {
     )))
       throw new Error("tokens must map token strings to { login, scopes? }");
     const env = raw.env === void 0 ? {} : validateEnvBlock(raw.env);
+    if (raw.prepare !== void 0 && (typeof raw.prepare !== "string" || !raw.prepare.trim()))
+      throw new Error("prepare must be a shell command");
     const entries = { ...raw.services };
     for (const name of SERVICE_NAMES)
       if (Object.hasOwn(raw, name)) {
@@ -2996,7 +3001,7 @@ async function loadConfig(options = {}, onDependenciesChange) {
         persistence: typeof persistence === "string" ? resolve2(directory, persistence) : persistence
       });
     }
-    return { path, directory, services, tokens: raw.tokens, env, watch: raw.watch ?? [], loader };
+    return { path, directory, services, tokens: raw.tokens, env, prepare: raw.prepare, watch: raw.watch ?? [], loader };
   } catch (error) {
     loader.close();
     throw error;
@@ -3415,7 +3420,8 @@ async function prepareProject(options, retained = {}, reload = false, onDependen
     aliases: [],
     secrets: [],
     retained: {},
-    env: config.env
+    env: config.env,
+    prepare: config.prepare
   };
   let closed = false;
   let accepting = false;
@@ -3437,15 +3443,18 @@ async function prepareProject(options, retained = {}, reload = false, onDependen
   }
   try {
     const ports = /* @__PURE__ */ new Set();
+    const servicePorts = await Promise.all(
+      config.services.map((service, index) => service.port ?? (options.port === 0 ? freePort() : options.port + index))
+    );
     for (const [index, service] of config.services.entries()) {
-      const port = service.port ?? options.port + index;
+      const port = servicePorts[index];
       if (!Number.isInteger(port) || port < 1 || port > 65535)
         throw new Error(`Invalid port for ${service.name}: ${port}`);
       if (ports.has(port)) throw new Error(`Duplicate port ${port} for ${service.name}`);
       ports.add(port);
     }
     for (const [index, service] of config.services.entries()) {
-      const port = service.port ?? options.port + index;
+      const port = servicePorts[index];
       const baseUrl = resolveBaseUrl({
         service: service.name,
         port,
@@ -3569,6 +3578,15 @@ function toTokens(config) {
     Object.entries(config.tokens).map(([token, user], index) => [token, { ...user, id: index + 100 }])
   );
 }
+function freePort() {
+  return new Promise((resolve4, reject) => {
+    const server = createNetServer().listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      server.close(() => resolve4(port));
+    });
+    server.once("error", reject);
+  });
+}
 
 export {
   SERVICE_NAMES,
@@ -3592,4 +3610,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-IHCYBRGF.js.map
+//# sourceMappingURL=chunk-KJJJVE5U.js.map

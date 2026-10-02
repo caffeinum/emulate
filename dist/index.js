@@ -14,7 +14,7 @@ import {
   registerAliases,
   removeAliases,
   resolveEnv
-} from "./chunk-IHCYBRGF.js";
+} from "./chunk-KJJJVE5U.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
@@ -714,18 +714,22 @@ async function runCommand(options, command) {
     registerAliases(aliases);
     await run.start();
     console.error(`emulate: ${run.metadata.services.map((s) => `${s.name} ${s.url}`).join(", ")}`);
-    const outside = Object.fromEntries(
-      PASSTHROUGH.flatMap((name) => process.env[name] ? [[name, process.env[name]]] : [])
-    );
-    return await runChild(command, { ...outside, ...env });
+    const outside = PASSTHROUGH.flatMap((name) => process.env[name] ? [[name, process.env[name]]] : []);
+    const childEnv = { ...Object.fromEntries(outside), ...env };
+    const { prepare } = run.metadata;
+    const prepared = prepare ? await runChild(prepare, childEnv) : 0;
+    if (prepared !== 0) throw new Error(`prepare exited with ${prepared}: ${prepare}`);
+    return await runChild(command, childEnv);
   } finally {
     await run.close().catch(console.error);
     removeAliases(aliases);
   }
 }
-function runChild([file, ...args], env) {
+function runChild(command, env) {
+  const [file, ...args] = typeof command === "string" ? [command] : command;
   return new Promise((resolveExit, reject) => {
-    const child = spawn(file, args, { stdio: "inherit", env, shell: process.platform === "win32" });
+    const shell = typeof command === "string" || process.platform === "win32";
+    const child = spawn(file, args, { stdio: "inherit", env, shell });
     const forward = (signal) => child.kill(signal);
     process.on("SIGINT", forward).on("SIGTERM", forward);
     const done = () => process.off("SIGINT", forward).off("SIGTERM", forward);
@@ -868,7 +872,7 @@ program.command("start", { isDefault: true }).description("Start the emulator se
     process.exit(1);
   }
 });
-program.command("run").description("Start the configured emulators, run a command with the config's env, then stop them").argument("<command...>", "Command to run, e.g. pnpm dev").option("-p, --port <port>", "Base port", defaultPort).option("-s, --service <services>", "Comma-separated services to enable").option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration").option("--portless", "Serve over HTTPS via portless (auto-registers aliases)").passThroughOptions().action(async (command, opts) => {
+program.command("run").description("Start the configured emulators, run a command with the config's env, then stop them").argument("<command...>", "Command to run, e.g. pnpm dev").option("-p, --port <port>", "Base port; 0 picks a free port per service", process.env.EMULATE_PORT ?? "4000").option("-s, --service <services>", "Comma-separated services to enable").option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration").option("--portless", "Serve over HTTPS via portless (auto-registers aliases)").passThroughOptions().action(async (command, opts) => {
   try {
     process.exitCode = await runCommand({ ...opts, port: Number(opts.port) }, command);
   } catch (error) {
