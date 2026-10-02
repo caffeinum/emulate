@@ -25,6 +25,7 @@ export {
   type TelegramSeedChatBot,
   type TelegramSeedConfig,
   type TelegramSeedUser,
+  type TelegramSeedWebhook,
   type TelegramIds,
 } from "./runtime.js";
 

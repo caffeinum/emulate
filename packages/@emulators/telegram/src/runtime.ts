@@ -8,6 +8,14 @@ export interface TelegramSeedBot {
   first_name?: string;
   description?: string;
   short_description?: string;
+  /** Deliver this bot's updates to a webhook from startup, as if it had called setWebhook. */
+  webhook?: TelegramSeedWebhook;
+}
+
+export interface TelegramSeedWebhook {
+  url: string;
+  secret_token?: string;
+  allowed_updates?: string[];
 }
 
 export interface TelegramSeedUser {
@@ -214,6 +222,7 @@ async function buildWorld(
     }
 
     await drainSeedUpdates(backend, seed.bots);
+    await registerSeedWebhooks(backend, seed.bots);
     const { calls } = await backend.getCalls();
 
     return {
@@ -252,5 +261,19 @@ async function drainSeedUpdates(backend: TelegramBackend, bots: TelegramSeedBot[
     const pending = await call({ timeout: 0 });
     const last = pending.at(-1);
     if (last) await call({ timeout: 0, offset: last.update_id + 1 });
+  }
+}
+
+async function registerSeedWebhooks(backend: TelegramBackend, bots: TelegramSeedBot[]): Promise<void> {
+  for (const bot of bots) {
+    if (!bot.webhook) continue;
+    if (!bot.webhook.url) throw new Error(`telegram seed bot ${bot.username} has a webhook without a url`);
+    const response = await fetch(`${backend.origin}/bot${bot.token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bot.webhook),
+    });
+    const body = (await response.json()) as { ok: boolean; description?: string };
+    if (!body.ok) throw new Error(`telegram seed bot ${bot.username} webhook was refused: ${body.description}`);
   }
 }
