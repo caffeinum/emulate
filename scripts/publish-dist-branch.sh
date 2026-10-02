@@ -5,6 +5,7 @@ set -euo pipefail
 
 BRANCH="${DIST_BRANCH:-dist}"
 REMOTE="${DIST_REMOTE:-origin}"
+SOURCE_BRANCH="${DIST_SOURCE_BRANCH:-main}"
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
@@ -13,12 +14,19 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
+git fetch --quiet "$REMOTE" "$SOURCE_BRANCH"
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "$SOURCE_BRANCH" ] ||
+  [ "$(git rev-parse HEAD)" != "$(git rev-parse "$REMOTE/$SOURCE_BRANCH")" ]; then
+  echo "error: check out $SOURCE_BRANCH at $REMOTE/$SOURCE_BRANCH before publishing; dist builds come from pushed $SOURCE_BRANCH" >&2
+  exit 1
+fi
+
 SOURCE_SHA="$(git rev-parse HEAD)"
 git fetch --quiet "$REMOTE" "$BRANCH" 2>/dev/null || true
 if git rev-parse --verify --quiet "$REMOTE/$BRANCH" >/dev/null &&
-  git log "$REMOTE/$BRANCH" --format=%B | grep -q "source: $SOURCE_SHA"; then
+  git log "$REMOTE/$BRANCH" --format=%B | grep -q "source: .*$SOURCE_SHA"; then
   echo "dist for $SOURCE_SHA already on $REMOTE/$BRANCH"
-  git log "$REMOTE/$BRANCH" --format="%H %s" --grep "source: $SOURCE_SHA" | head -1
+  git log "$REMOTE/$BRANCH" --format="%H %s" --grep "$SOURCE_SHA" | head -1
   exit 0
 fi
 
@@ -64,8 +72,8 @@ if grep -rq "workspace:" "$WORKTREE/package.json"; then
 fi
 
 git -C "$WORKTREE" add -A
-git -C "$WORKTREE" commit --quiet -m "dist: emulate $(node -p 'require("./packages/emulate/package.json").version') from ${SOURCE_SHA:0:12}
+git -C "$WORKTREE" commit --quiet -m "dist: emulate $(node -p 'require("./packages/emulate/package.json").version') from $SOURCE_BRANCH@${SOURCE_SHA:0:12}
 
-source: $SOURCE_SHA"
+source: $SOURCE_BRANCH@$SOURCE_SHA"
 git -C "$WORKTREE" push --quiet "$REMOTE" "$BRANCH"
 echo "$(git -C "$WORKTREE" rev-parse HEAD) dist for $SOURCE_SHA"
