@@ -41,6 +41,7 @@ const SERVICE_NAME_LIST = [
   "linear",
   "twilio",
   "telegram",
+  "workos",
 ] as const;
 export type ServiceName = (typeof SERVICE_NAME_LIST)[number];
 export const SERVICE_NAMES: readonly ServiceName[] = SERVICE_NAME_LIST;
@@ -664,6 +665,24 @@ export const SERVICE_REGISTRY: Record<ServiceName, ServiceEntry> = {
             topics: ["general-ideas"],
           },
         ],
+      },
+    },
+  },
+
+  workos: {
+    label: "WorkOS API emulator (via @workos/emulate)",
+    endpoints: "AuthKit authorize/authenticate, user management, organizations, sessions, JWKS, SSO, API keys",
+    async load() {
+      const mod = await import("@emulators/workos");
+      return { plugin: mod.workosPlugin, seedFromConfig: mod.seedFromConfig };
+    },
+    defaultFallback() {
+      return { login: "workos", id: 1, scopes: [] };
+    },
+    initConfig: {
+      workos: {
+        users: [{ email: "developer@example.com", first_name: "Developer", email_verified: true }],
+        organizations: [{ name: "Example Org" }],
       },
     },
   },

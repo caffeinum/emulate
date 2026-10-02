@@ -76,6 +76,7 @@
     "@emulators/twilio": "workspace:*",
     "tsup": "^8",
     "typescript": "^5.7",
-    "@emulators/telegram": "workspace:*"
+    "@emulators/telegram": "workspace:*",
+    "@emulators/workos": "workspace:*"
   }
 }
