@@ -88,7 +88,7 @@ export async function startSlackTestEmulator(
 
   const { port } = server.address() as AddressInfo;
   const url = `http://127.0.0.1:${port}`;
-  slackPlugin.register!(app, store, webhooks, url, tokenMap);
+  const cleanup = slackPlugin.register!(app, store, webhooks, url, tokenMap);
   slackPlugin.seed?.(store, url);
 
   const ss = getSlackStore(store);
@@ -103,10 +103,12 @@ export async function startSlackTestEmulator(
   return {
     ...setup,
     url,
-    close: () =>
-      new Promise<void>((resolve, reject) => {
+    close: async () => {
+      await cleanup?.();
+      await new Promise<void>((resolve, reject) => {
         server.close((err) => (err ? reject(err) : resolve()));
-      }),
+      });
+    },
   };
 }
 

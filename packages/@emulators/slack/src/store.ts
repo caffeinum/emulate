@@ -19,6 +19,7 @@ import type {
   SlackViewTrigger,
   SlackResponseUrl,
   SlackInteractionDelivery,
+  SlackUsergroup,
 } from "./entities.js";
 
 export interface SlackStore {
@@ -41,6 +42,7 @@ export interface SlackStore {
   viewTriggers: Collection<SlackViewTrigger>;
   responseUrls: Collection<SlackResponseUrl>;
   interactionDeliveries: Collection<SlackInteractionDelivery>;
+  usergroups: Collection<SlackUsergroup>;
 }
 
 export function getSlackStore(store: Store): SlackStore {
@@ -76,5 +78,6 @@ export function getSlackStore(store: Store): SlackStore {
     responseUrls: store.collection<SlackResponseUrl>("slack.response_urls", ["response_id"]),
     interactionDeliveries: store.collection<SlackInteractionDelivery>("slack.interaction_deliveries", ["app_id"]),
     viewTriggers: store.collection<SlackViewTrigger>("slack.view_triggers", ["trigger_id", "user_id", "view_id"]),
+    usergroups: store.collection<SlackUsergroup>("slack.usergroups", ["usergroup_id", "handle"]),
   };
 }
