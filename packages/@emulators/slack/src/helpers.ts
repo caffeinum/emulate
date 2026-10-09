@@ -226,6 +226,7 @@ export function formatSlackMessage(msg: SlackMessage) {
     ts: msg.ts,
     ...(msg.subtype ? { subtype: msg.subtype } : {}),
     ...(msg.bot_id ? { bot_id: msg.bot_id } : {}),
+    ...(msg.bot_profile ? { bot_profile: msg.bot_profile } : {}),
     ...(msg.app_id ? { app_id: msg.app_id } : {}),
     ...(msg.bot_profile ? { bot_profile: msg.bot_profile } : {}),
     ...(msg.username ? { username: msg.username } : {}),

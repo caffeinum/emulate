@@ -799,7 +799,6 @@ describe("Slack plugin - event dispatch baseline", () => {
     expect((capture.jsonBodies()[0] as any).event.user).toBeUndefined();
   });
 
-
   it("registers event subscriptions from slack.event_subscriptions seed config", async () => {
     const { app, store, webhooks } = createSlackTestApp();
     const capture = captureFetchRequests();
@@ -850,7 +849,6 @@ describe("Slack plugin - event dispatch baseline", () => {
       "slack.event_subscriptions entries require a url",
     );
   });
-
 
   it("dispatches archive and unarchive lifecycle events", async () => {
     const { app, webhooks } = createSlackTestApp();
