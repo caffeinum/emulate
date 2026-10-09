@@ -3,6 +3,7 @@ import { getSlackStore } from "../store.js";
 import { buildSlackEventEnvelope, dispatchSlackAppMention, slackMessageTeamFields } from "../events.js";
 import {
   formatSlackMessage,
+  slackBotProfile,
   slackMessageChannelType,
   generateTs,
   hasSlackMessageContent,
@@ -81,6 +82,7 @@ export function webhookRoutes(ctx: RouteContext): void {
 
     const ts = generateTs();
     const botId = c.req.param("botId");
+    const botProfile = slackBotProfile(store, botId);
 
     const msg = ss().messages.insert({
       ts,
@@ -92,6 +94,7 @@ export function webhookRoutes(ctx: RouteContext): void {
       thread_ts: threadTs,
       ...richMessage.fields,
       bot_id: botId,
+      ...(botProfile ? { bot_profile: botProfile } : {}),
       reply_count: 0,
       reply_users: [],
       reactions: [],

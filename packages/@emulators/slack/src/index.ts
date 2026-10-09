@@ -25,6 +25,9 @@ import { pinsRoutes } from "./routes/pins.js";
 import { bookmarksRoutes } from "./routes/bookmarks.js";
 import { viewsRoutes } from "./routes/views.js";
 import { inspectorRoutes } from "./routes/inspector.js";
+import { emojiRoutes, SLACK_EMOJI_KEY } from "./routes/emoji.js";
+import { usergroupsRoutes } from "./routes/usergroups.js";
+import { socketModeRoutes } from "./socket-mode.js";
 
 export { getSlackStore, type SlackStore } from "./store.js";
 export * from "./entities.js";
@@ -63,6 +66,7 @@ export interface SlackSeedConfig {
   }>;
   bots?: Array<{
     name: string;
+    icon?: string;
   }>;
   oauth_apps?: Array<{
     app_id?: string;
@@ -75,6 +79,7 @@ export interface SlackSeedConfig {
     bot_id?: string;
     bot_user_id?: string;
     bot_name?: string;
+    bot_icon?: string;
   }>;
   tokens?: Array<{
     token: string;
@@ -93,6 +98,16 @@ export interface SlackSeedConfig {
     channel: string;
     label?: string;
   }>;
+  emoji?: Record<string, string>;
+  usergroups?: Array<{
+    id?: string;
+    handle: string;
+    name?: string;
+    description?: string;
+    users?: string[];
+    disabled?: boolean;
+  }>;
+  edit_window_minutes?: number;
   strict_scopes?: boolean;
   signing_secret?: string;
   event_subscriptions?: Array<{
@@ -132,6 +147,8 @@ const DEFAULT_SLACK_SCOPES = [
   "reactions:write",
   "team:read",
   "search:read",
+  "emoji:read",
+  "usergroups:read",
 ];
 
 function slackWebhookHeaders(store: Store, { body }: WebhookHeaderContext): Record<string, string> {
@@ -339,13 +356,16 @@ export function seedFromConfig(
   if (config.bots) {
     for (const b of config.bots) {
       const existing = ss.bots.all().find((eb) => eb.name === b.name);
-      if (existing) continue;
+      if (existing) {
+        if (b.icon) ss.bots.update(existing.id, { icons: { image_48: b.icon } });
+        continue;
+      }
 
       ss.bots.insert({
         bot_id: generateSlackId("B"),
         name: b.name,
         deleted: false,
-        icons: { image_48: "" },
+        icons: { image_48: b.icon ?? "" },
       });
     }
   }
@@ -371,6 +391,7 @@ export function seedFromConfig(
         bot_id: oa.bot_id,
         bot_user_id: oa.bot_user_id,
         bot_name: oa.bot_name,
+        bot_icon: oa.bot_icon,
       });
     }
 
@@ -431,6 +452,36 @@ export function seedFromConfig(
     ss.channels.update(channel.id, { members, num_members: members.length });
   }
 
+  if (config.emoji) {
+    store.setData(SLACK_EMOJI_KEY, {
+      ...(store.getData<Record<string, string>>(SLACK_EMOJI_KEY) ?? {}),
+      ...config.emoji,
+    });
+  }
+
+  for (const group of config.usergroups ?? []) {
+    if (ss.usergroups.findOneBy("handle", group.handle)) continue;
+    const users = (group.users ?? []).map((ref) => {
+      const user = ss.users.findOneBy("user_id", ref) ?? ss.users.findOneBy("name", ref);
+      if (!user) throw new Error(`Slack seed usergroup ${group.handle} lists unknown user ${ref}`);
+      return user.user_id;
+    });
+    ss.usergroups.insert({
+      usergroup_id: group.id ?? generateSlackId("S"),
+      team_id: teamId,
+      handle: group.handle,
+      name: group.name ?? group.handle,
+      description: group.description ?? "",
+      users,
+      created_by: ss.users.all()[0]?.user_id ?? "U000000001",
+      disabled: group.disabled ?? false,
+    });
+  }
+
+  if (config.edit_window_minutes !== undefined) {
+    store.setData("slack.edit_window_minutes", config.edit_window_minutes);
+  }
+
   if (config.signing_secret !== undefined) {
     store.setData("slack.signing_secret", config.signing_secret);
   }
@@ -457,7 +508,7 @@ export function seedFromConfig(
 
 export const slackPlugin: ServicePlugin = {
   name: "slack",
-  register(app: Hono<AppEnv>, store: Store, webhooks: WebhookDispatcher, baseUrl: string, tokenMap?: TokenMap): void {
+  register(app: Hono<AppEnv>, store: Store, webhooks: WebhookDispatcher, baseUrl: string, tokenMap?: TokenMap) {
     webhooks.setHeaderFactory((context) => slackWebhookHeaders(store, context));
 
     app.use("*", async (c, next) => {
@@ -478,7 +529,11 @@ export const slackPlugin: ServicePlugin = {
     pinsRoutes(ctx);
     bookmarksRoutes(ctx);
     viewsRoutes(ctx);
+    emojiRoutes(ctx);
+    usergroupsRoutes(ctx);
+    const closeSocketMode = socketModeRoutes(ctx);
     inspectorRoutes(ctx);
+    return closeSocketMode;
   },
   seed(store: Store, baseUrl: string): void {
     seedDefaults(store, baseUrl);
@@ -535,6 +590,7 @@ function seedOAuthInstallation(
     (app.bot_id ? ss.bots.findOneBy("bot_id", app.bot_id) : undefined) ??
     ss.bots.all().find((bot) => bot.name === botName);
   const botId = app.bot_id ?? existingBot?.bot_id ?? generateSlackId("B");
+  const icon = app.bot_icon ?? existingBot?.icons.image_48 ?? "";
   const botUserId = app.bot_user_id ?? existingBot?.user_id ?? generateSlackId("U");
   const bot =
     existingBot ??
@@ -544,11 +600,11 @@ function seedOAuthInstallation(
       user_id: botUserId,
       name: botName,
       deleted: false,
-      icons: { image_48: "" },
+      icons: { image_48: icon },
     });
 
-  if (bot.app_id !== appId || bot.user_id !== botUserId) {
-    ss.bots.update(bot.id, { app_id: appId, user_id: botUserId });
+  if (bot.app_id !== appId || bot.user_id !== botUserId || bot.icons.image_48 !== icon) {
+    ss.bots.update(bot.id, { app_id: appId, user_id: botUserId, icons: { image_48: icon } });
   }
   if (!app.bot_id || !app.bot_user_id || !app.bot_name) {
     ss.oauthApps.update(app.id, {
@@ -572,8 +628,8 @@ function seedOAuthInstallation(
         display_name: botName,
         real_name: app.name,
         email: `${botName}@bots.emulate.dev`,
-        image_48: "",
-        image_192: "",
+        image_48: icon,
+        image_192: icon,
         real_name_normalized: app.name,
         display_name_normalized: botName,
         status_text: "",

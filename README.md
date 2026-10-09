@@ -1047,6 +1047,29 @@ Client methods include `users.conversations`, unread counts in `conversations.in
 
 Slack message text is limited to 40,000 Unicode characters across chat writes, incoming webhooks, and file upload initial comments. Longer text is truncated at a Unicode code point boundary before it is stored or dispatched. Successful Web API responses include `warning: "message_truncated"` and `response_metadata` with the matching warning and explanatory message. Rich fields such as `blocks` and `attachments` are preserved unchanged.
 
+### Socket Mode, emoji, usergroups, bot profiles
+
+```yaml
+slack:
+  oauth_apps:
+    - { client_id: relay.app, client_secret: s, name: Relay, redirect_uris: [], app_id: A0RELAY, bot_id: B0RELAY, bot_user_id: U0RELAYBOT, bot_icon: https://example.com/relay.png }
+  tokens:
+    - { token: xapp-1-relay, type: app, app_id: A0RELAY }
+    - { token: xoxb-relay, type: bot, user: U0RELAYBOT, bot_id: B0RELAY }
+  emoji: { party: https://example.com/party.gif, tada: "alias:party" }
+  usergroups:
+    - { id: S0ENG, handle: eng, name: Engineering, users: [admin] }
+  edit_window_minutes: 15
+```
+
+- Socket Mode: `apps.connections.open` with an `xapp-` token returns a one-time `ws://127.0.0.1:<port>/link/?ticket=...` url. The socket sends `hello`, then every event the emulator dispatches as an `events_api` envelope (one connection per app gets each envelope) and expects `{"envelope_id"}` acks. `GET /_slack/socket_mode` lists connections and unacked envelopes; `POST /_slack/socket_mode/disconnect` with an optional `reason` (`refresh_requested` by default, `warning`, `link_disabled`) and `app_id` sends a `disconnect` frame, closing the socket unless the reason is `warning`. Works with `@slack/socket-mode` and Bolt.
+- `emoji.list` returns the seeded `emoji` map. `admin.emoji.add`, `admin.emoji.addAlias`, and `admin.emoji.remove` change it and dispatch `emoji_changed`.
+- `usergroups.list` (`include_users`, `include_count`, `include_disabled`) and `usergroups.users.list` read the seeded `usergroups`.
+- Messages posted with a bot token, or with `bot_id`, carry `bot_id`, `app_id`, and `bot_profile`. Set the icon with `bot_icon` on an OAuth app or `icon` on a `bots` entry.
+- `reply_broadcast: true` on a thread reply gives it subtype `thread_broadcast`, and it shows in `conversations.history`.
+- With `edit_window_minutes`, `chat.update` returns `edit_window_closed` for messages older than the window (`0` closes it immediately).
+- `conversations.mark` sets the `last_read` that `conversations.info` returns, and dispatches `channel_marked`, `group_marked`, `im_marked`, or `mpim_marked`.
+
 ### Auth & Chat
 - `POST /api/auth.test` - test authentication
 - `POST /api/chat.postMessage` - post message with text or rich payload fields (supports threads via `thread_ts` and DM user IDs)
@@ -1126,9 +1149,9 @@ Modal opens and pushes require values from `/api/views.generateTriggerId`. Pass 
 
 When a supported Slack write emits an `event_callback`, the payload contains the inner `event` plus outer `team_id`, `event_id`, and `event_time`. The team comes from the presented Slack token's installation; development tokens without a stored Slack record fall back to the affected channel, user, or file's team, then the seeded workspace team (or `T000000001`). Incoming webhook posts use their webhook record's team, or the target channel's team when no record matches. `event_time` is an integer Unix timestamp in seconds. Each logical event gets a new `event_id`, shared across deliveries to multiple subscribers.
 
-Slack scope checks are relaxed by default so local tests can use simple bearer tokens. Set `slack.strict_scopes: true` in seed config to make supported Web API methods return Slack-style `missing_scope` errors with `needed` and `provided` fields. Strict mode checks `chat:write`, `channels:read`, `channels:history`, `channels:join`, `channels:manage`, `channels:write`, `groups:read`, `groups:history`, `groups:write`, `im:read`, `im:history`, `im:write`, `mpim:read`, `mpim:history`, `mpim:write`, `users:read`, `users:read.email`, `users.profile:read`, `users.profile:write`, `users:write`, `files:read`, `files:write`, `pins:read`, `pins:write`, `bookmarks:read`, `bookmarks:write`, `reactions:read`, `reactions:write`, and `team:read`. Slack lists no method-specific scopes for `views.publish`, `views.open`, `views.update`, or `views.push`, so the emulator requires auth but does not add strict-scope checks for those methods.
+Slack scope checks are relaxed by default so local tests can use simple bearer tokens. Set `slack.strict_scopes: true` in seed config to make supported Web API methods return Slack-style `missing_scope` errors with `needed` and `provided` fields. Strict mode checks `chat:write`, `channels:read`, `channels:history`, `channels:join`, `channels:manage`, `channels:write`, `groups:read`, `groups:history`, `groups:write`, `im:read`, `im:history`, `im:write`, `mpim:read`, `mpim:history`, `mpim:write`, `users:read`, `users:read.email`, `users.profile:read`, `users.profile:write`, `users:write`, `files:read`, `files:write`, `pins:read`, `pins:write`, `bookmarks:read`, `bookmarks:write`, `reactions:read`, `reactions:write`, `team:read`, `search:read`, `emoji:read`, and `usergroups:read`. Slack lists no method-specific scopes for `views.publish`, `views.open`, `views.update`, or `views.push`, so the emulator requires auth but does not add strict-scope checks for those methods.
 
-Current Slack limits: Slack Connect, Enterprise Grid admin APIs, Audit Logs API, SCIM, Legal Holds, Socket Mode, slash command and interaction simulation, user groups, reminders, stars, calls, canvases, lists, functions, workflows, chat streaming, legacy `files.upload`, exact rate limiting, and paid-plan behavior are not implemented.
+Current Slack limits: Slack Connect, Enterprise Grid admin APIs, Audit Logs API, SCIM, Legal Holds, RTM, slash command and interaction simulation, user group writes, reminders, stars, calls, canvases, lists, functions, workflows, chat streaming, legacy `files.upload`, exact rate limiting, and paid-plan behavior are not implemented.
 
 ## Linear API
 

@@ -23,6 +23,7 @@ import {
   parseSlackRichMessageFields,
   requireSlackScopes,
   setSlackConversationOpenState,
+  slackBotProfile,
   slackError,
   slackMessageTextResponseMetadata,
   slackOk,
@@ -150,6 +151,9 @@ export function chatRoutes(ctx: RouteContext): void {
     if (ch.is_archived) return slackError(c, "is_archived");
     if (!canAccessConversation(ch, authUser)) return slackError(c, "not_in_channel");
     const authUserId = getAuthUserId(authUser);
+    const token = c.get("authToken");
+    const botId = richMessage.fields.bot_id ?? (token ? ss().tokens.findOneBy("token", token)?.bot_id : undefined);
+    const botProfile = botId ? slackBotProfile(store, botId) : undefined;
 
     const ts = generateTs();
     const msg = ss().messages.insert({
@@ -159,7 +163,10 @@ export function chatRoutes(ctx: RouteContext): void {
       text: normalizedText.text,
       type: "message" as const,
       thread_ts,
+      ...(thread_ts && richMessage.fields.reply_broadcast ? { subtype: "thread_broadcast" } : {}),
       ...richMessage.fields,
+      ...(botId ? { bot_id: botId } : {}),
+      ...(botProfile ? { bot_profile: botProfile, app_id: richMessage.fields.app_id ?? botProfile.app_id } : {}),
       reply_count: 0,
       reply_users: [],
       reactions: [],
@@ -287,6 +294,10 @@ export function chatRoutes(ctx: RouteContext): void {
       .find((m) => m.ts === ts && m.channel_id === channel);
     if (!msg) return slackError(c, "message_not_found");
     if (!isAuthoredByUser(msg, authUser)) return slackError(c, "cant_update_message");
+    const editWindowMinutes = store.getData<number>("slack.edit_window_minutes");
+    if (editWindowMinutes !== undefined && Date.now() / 1000 - Math.floor(Number(msg.ts)) >= editWindowMinutes * 60) {
+      return slackError(c, "edit_window_closed");
+    }
 
     const updates: Partial<SlackMessage> = { ...richMessage.fields };
     if (hasText) {

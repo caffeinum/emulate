@@ -199,7 +199,7 @@ export function conversationsRoutes(ctx: RouteContext): void {
     const lastRead = ch.last_read?.[authUserId] ?? "0000000000.000000";
     const unread = ss()
       .messages.findBy("channel_id", ch.channel_id)
-      .filter((m) => m.ts > lastRead && (!m.thread_ts || m.thread_ts === m.ts));
+      .filter((m) => m.ts > lastRead && (!m.thread_ts || m.thread_ts === m.ts || m.subtype === "thread_broadcast"));
     const display = unread.filter((m) => m.user !== authUserId && !m.subtype?.startsWith("channel_")).length;
     return slackOk(c, { channel: { ...channelInfo, unread_count: unread.length, unread_count_display: display } });
   });
@@ -552,7 +552,7 @@ export function conversationsRoutes(ctx: RouteContext): void {
     // Get top-level messages (no thread_ts or thread_ts === ts)
     const allMessages = ss()
       .messages.findBy("channel_id", channel)
-      .filter((m) => !m.thread_ts || m.thread_ts === m.ts)
+      .filter((m) => !m.thread_ts || m.thread_ts === m.ts || m.subtype === "thread_broadcast")
       .sort((a, b) => (b.ts > a.ts ? 1 : -1));
 
     let startIndex = 0;
@@ -1102,8 +1102,9 @@ function closeEventType(ch: SlackChannel): "group_close" | "im_close" {
   return ch.is_im ? "im_close" : "group_close";
 }
 
-function markEventType(ch: SlackChannel): "channel_marked" | "group_marked" | "im_marked" {
+function markEventType(ch: SlackChannel): "channel_marked" | "group_marked" | "im_marked" | "mpim_marked" {
   if (ch.is_im) return "im_marked";
-  if (ch.is_private || ch.is_mpim) return "group_marked";
+  if (ch.is_mpim) return "mpim_marked";
+  if (ch.is_private) return "group_marked";
   return "channel_marked";
 }

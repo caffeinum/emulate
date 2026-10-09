@@ -98,6 +98,7 @@ export interface SlackMessage extends Entity {
   icon_url?: string;
   icon_emoji?: string;
   bot_id?: string;
+  bot_profile?: SlackJsonObject;
   app_id?: string;
   client_msg_id?: string;
   reply_broadcast?: boolean;
@@ -163,6 +164,7 @@ export interface SlackOAuthApp extends Entity {
   bot_id?: string;
   bot_user_id?: string;
   bot_name?: string;
+  bot_icon?: string;
 }
 
 export interface SlackInstallation extends Entity {
@@ -178,7 +180,7 @@ export interface SlackInstallation extends Entity {
   user_scopes: string[];
 }
 
-export type SlackTokenType = "bot" | "user" | "test";
+export type SlackTokenType = "bot" | "user" | "app" | "test";
 
 export interface SlackToken extends Entity {
   token: string;
@@ -334,4 +336,15 @@ export interface SlackViewTrigger extends Entity {
   expires_at: number;
   used: boolean;
   view_id?: string;
+}
+
+export interface SlackUsergroup extends Entity {
+  usergroup_id: string;
+  team_id: string;
+  handle: string;
+  name: string;
+  description: string;
+  users: string[];
+  created_by: string;
+  disabled: boolean;
 }

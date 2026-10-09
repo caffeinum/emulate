@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import type { Context } from "@emulators/core";
 import type { ContentfulStatusCode } from "@emulators/core";
 import type { Store } from "@emulators/core";
+import { getSlackStore } from "./store.js";
 import type {
   SlackChannel,
   SlackFile,
@@ -69,6 +70,23 @@ export function generateTs(): string {
   const now = Math.floor(Date.now() / 1000);
   tsCounter++;
   return `${now}.${String(tsCounter).padStart(6, "0")}`;
+}
+
+export function slackBotProfile(store: Store, botId: string) {
+  const ss = getSlackStore(store);
+  const bot = ss.bots.findOneBy("bot_id", botId);
+  if (!bot) return undefined;
+  const image = bot.icons.image_48;
+  return {
+    id: bot.bot_id,
+    ...(bot.app_id ? { app_id: bot.app_id } : {}),
+    name: bot.name,
+    icons: { image_36: image, image_48: image, image_72: image },
+    deleted: bot.deleted,
+    updated: Math.floor(new Date(bot.updated_at).getTime() / 1000),
+    team_id:
+      (bot.user_id ? ss.users.findOneBy("user_id", bot.user_id)?.team_id : undefined) ?? ss.teams.all()[0]?.team_id,
+  };
 }
 
 export function slackOk<T extends Record<string, unknown>>(c: Context, data: T) {
@@ -201,6 +219,7 @@ export function formatSlackMessage(msg: SlackMessage) {
     ts: msg.ts,
     ...(msg.subtype ? { subtype: msg.subtype } : {}),
     ...(msg.bot_id ? { bot_id: msg.bot_id } : {}),
+    ...(msg.bot_profile ? { bot_profile: msg.bot_profile } : {}),
     ...(msg.app_id ? { app_id: msg.app_id } : {}),
     ...(msg.username ? { username: msg.username } : {}),
     ...(msg.icon_url ? { icon_url: msg.icon_url } : {}),
