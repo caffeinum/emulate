@@ -202,6 +202,7 @@ export function chatRoutes(ctx: RouteContext): void {
       text: normalizedText.text,
       type: "message" as const,
       thread_ts,
+      ...(thread_ts && richMessage.fields.reply_broadcast ? { subtype: "thread_broadcast" } : {}),
       ...richMessage.fields,
       ...(botId ? slackBotMessageFields(store, botId, ch.team_id, authToken?.app_id) : {}),
       reply_count: 0,
@@ -316,6 +317,10 @@ export function chatRoutes(ctx: RouteContext): void {
       .find((m) => m.ts === ts && m.channel_id === channel);
     if (!msg) return slackError(c, "message_not_found");
     if (!isAuthoredByUser(msg, authUser)) return slackError(c, "cant_update_message");
+    const editWindowMinutes = store.getData<number>("slack.edit_window_minutes");
+    if (editWindowMinutes !== undefined && Date.now() / 1000 - Math.floor(Number(msg.ts)) >= editWindowMinutes * 60) {
+      return slackError(c, "edit_window_closed");
+    }
 
     const updates: Partial<SlackMessage> = { ...richMessage.fields };
     if (hasText) {
