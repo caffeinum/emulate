@@ -133,6 +133,7 @@ const DEFAULT_SLACK_SCOPES = [
   "reactions:read",
   "reactions:write",
   "team:read",
+  "search:read",
 ];
 
 function seedDefaults(store: Store, _baseUrl: string): void {
