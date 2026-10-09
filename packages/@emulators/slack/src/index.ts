@@ -131,6 +131,7 @@ const DEFAULT_SLACK_SCOPES = [
   "reactions:read",
   "reactions:write",
   "team:read",
+  "search:read",
 ];
 
 function slackWebhookHeaders(store: Store, { body }: WebhookHeaderContext): Record<string, string> {

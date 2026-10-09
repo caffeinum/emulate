@@ -28,7 +28,9 @@ Scope checks are relaxed by default for local development. Set `slack.strict_sco
 ## Conversations
 
 - `POST /api/conversations.list` - list conversations (cursor pagination, `types`, `exclude_archived`)
-- `POST /api/conversations.info` - get channel info
+- `POST /api/conversations.info` - get channel info, with `last_read`, `unread_count`, and `unread_count_display` for members
+- `POST /api/users.conversations` - conversations the caller (or `user`) belongs to, with the same filters as `conversations.list`
+- `POST /api/search.messages` - search messages: every word must match, `in:#channel` and `from:@user` narrow it, `count`/`page` paging, newest first unless `sort_dir=asc`
 - `POST /api/conversations.create` - create channel
 - `POST /api/conversations.archive` - archive channel
 - `POST /api/conversations.unarchive` - restore archived channel

@@ -4,6 +4,7 @@ import { buildSlackEventEnvelope, resolveSlackEventTeamId } from "../events.js";
 import { getSlackStore } from "../store.js";
 import {
   formatSlackMessage,
+  formatSlackPermalink,
   slackMessageChannelType,
   generateSlackId,
   generateTs,
@@ -133,8 +134,8 @@ export function conversationsRoutes(ctx: RouteContext): void {
     });
   };
 
-  // conversations.list
-  app.post("/api/conversations.list", async (c) => {
+  // conversations.list, and users.conversations (only conversations the user is a member of)
+  const listConversations = (membersOnly: boolean) => async (c: Context) => {
     const authUser = c.get("authUser");
     if (!authUser) return slackError(c, "not_authed");
 
@@ -148,10 +149,14 @@ export function conversationsRoutes(ctx: RouteContext): void {
     const authSlackUser = getAuthSlackUser(authUser);
     const authUserId = getAuthUserId(authUser);
 
+    const member =
+      membersOnly && typeof body.user === "string" ? ss().users.findOneBy("user_id", body.user) : undefined;
+    if (membersOnly && typeof body.user === "string" && !member) return slackError(c, "user_not_found");
     const allChannels = ss()
       .channels.all()
       .filter((ch) => matchesConversationTypes(ch, types))
       .filter((ch) => canReadConversation(ch, authSlackUser, authUserId))
+      .filter((ch) => !membersOnly || isChannelMember(ch, member ?? authSlackUser, member?.user_id ?? authUserId))
       .filter((ch) => !excludeArchived || !ch.is_archived);
 
     // Simple cursor pagination using channel id
@@ -168,7 +173,9 @@ export function conversationsRoutes(ctx: RouteContext): void {
       channels: page.map((ch) => formatChannel(ch, authUserId, authSlackUser?.name)),
       response_metadata: { next_cursor: nextCursor },
     });
-  });
+  };
+  app.post("/api/conversations.list", listConversations(false));
+  app.post("/api/users.conversations", listConversations(true));
 
   // conversations.info
   app.post("/api/conversations.info", async (c) => {
@@ -186,7 +193,99 @@ export function conversationsRoutes(ctx: RouteContext): void {
     const authUserId = getAuthUserId(authUser);
     if (!canReadConversation(ch, authSlackUser, authUserId)) return slackError(c, "not_in_channel");
 
-    return slackOk(c, { channel: formatChannel(ch, authUserId, authSlackUser?.name) });
+    const channelInfo = formatChannel(ch, authUserId, authSlackUser?.name);
+    if (!channelInfo.is_member) return slackOk(c, { channel: channelInfo });
+    // Messages after the viewer's read cursor, as Slack reports for user tokens; thread replies and their own don't count.
+    const lastRead = ch.last_read?.[authUserId] ?? "0000000000.000000";
+    const unread = ss()
+      .messages.findBy("channel_id", ch.channel_id)
+      .filter((m) => m.ts > lastRead && (!m.thread_ts || m.thread_ts === m.ts));
+    const display = unread.filter((m) => m.user !== authUserId && !m.subtype?.startsWith("channel_")).length;
+    return slackOk(c, { channel: { ...channelInfo, unread_count: unread.length, unread_count_display: display } });
+  });
+
+  // search.messages: every word must appear; in:#channel / in:<#C..> and from:@user / from:<@U..> narrow it.
+  app.post("/api/search.messages", async (c) => {
+    const authUser = c.get("authUser");
+    if (!authUser) return slackError(c, "not_authed");
+    const scopeError = requireSlackScopes(c, store, ["search:read"]);
+    if (scopeError) return scopeError;
+    const body = await parseSlackBody(c);
+    const query = typeof body.query === "string" ? body.query.trim() : "";
+    if (!query) return slackError(c, "no_query");
+    const count = Math.min(Math.max(Number(body.count) || 20, 1), 100);
+    const page = Math.max(Number(body.page) || 1, 1);
+    const ascending = body.sort_dir === "asc";
+    const authSlackUser = getAuthSlackUser(authUser);
+    const authUserId = getAuthUserId(authUser);
+
+    const words: string[] = [];
+    const inChannels: string[] = [];
+    const fromUsers: string[] = [];
+    for (const token of query.split(/\s+/)) {
+      const [, key, value] = /^(in|from):<?[#@]?([^>|]+)(?:\|[^>]*)?>?$/i.exec(token) ?? [];
+      if (key?.toLowerCase() === "in") inChannels.push(value!.toLowerCase());
+      else if (key?.toLowerCase() === "from") fromUsers.push(value!.toLowerCase());
+      else words.push(token.toLowerCase());
+    }
+    const channels = new Map(
+      ss()
+        .channels.all()
+        .filter((ch) => canReadConversation(ch, authSlackUser, authUserId))
+        .filter((ch) => !ch.is_im || isChannelMember(ch, authSlackUser, authUserId))
+        .filter(
+          (ch) =>
+            !inChannels.length ||
+            inChannels.some((ref) => [ch.channel_id.toLowerCase(), ch.name.toLowerCase()].includes(ref)),
+        )
+        .map((ch) => [ch.channel_id, ch]),
+    );
+    const userName = (id: string) => ss().users.findOneBy("user_id", id)?.name ?? id;
+    const matches = ss()
+      .messages.all()
+      .filter((m) => channels.has(m.channel_id) && !m.subtype?.startsWith("channel_"))
+      .filter((m) => words.every((word) => m.text.toLowerCase().includes(word)))
+      .filter(
+        (m) =>
+          !fromUsers.length ||
+          fromUsers.some((ref) => [m.user.toLowerCase(), userName(m.user).toLowerCase()].includes(ref)),
+      )
+      .sort((a, b) => (ascending ? a.ts.localeCompare(b.ts) : b.ts.localeCompare(a.ts)));
+    const pages = Math.max(Math.ceil(matches.length / count), 1);
+    return slackOk(c, {
+      query,
+      messages: {
+        total: matches.length,
+        matches: matches.slice((page - 1) * count, page * count).map((m) => {
+          const ch = channels.get(m.channel_id)!;
+          return {
+            type: "message",
+            channel: {
+              id: ch.channel_id,
+              name: ch.name,
+              is_private: ch.is_private,
+              is_im: ch.is_im ?? false,
+              is_mpim: ch.is_mpim ?? false,
+            },
+            user: m.user,
+            username: userName(m.user),
+            ts: m.ts,
+            text: m.text,
+            team: ch.team_id,
+            permalink: formatSlackPermalink(ctx.baseUrl, ch.channel_id, m),
+          };
+        }),
+        paging: { count, total: matches.length, page, pages },
+        pagination: {
+          total_count: matches.length,
+          page,
+          per_page: count,
+          page_count: pages,
+          first: matches.length ? (page - 1) * count + 1 : 0,
+          last: Math.min(page * count, matches.length),
+        },
+      },
+    });
   });
 
   // conversations.create

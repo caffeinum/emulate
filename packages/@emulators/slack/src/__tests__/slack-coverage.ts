@@ -105,6 +105,22 @@ export const slackCoverageMatrix: SlackCoverageEntry[] = [
   },
   {
     family: "conversations",
+    method: "users.conversations",
+    route: "POST /api/users.conversations",
+    status: "partial",
+    testedBy: ["slack-client.test.ts"],
+    notes: "conversations.list filtered to conversations the caller (or `user`) is a member of.",
+  },
+  {
+    family: "conversations",
+    method: "search.messages",
+    route: "POST /api/search.messages",
+    status: "partial",
+    testedBy: ["slack-client.test.ts"],
+    notes: "Word match plus in: and from: modifiers, newest first or sort_dir=asc, count/page paging.",
+  },
+  {
+    family: "conversations",
     method: "conversations.info",
     route: "POST /api/conversations.info",
     status: "supported",
