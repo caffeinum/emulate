@@ -24,7 +24,8 @@
   "dependencies": {
     "commander": "^14",
     "picocolors": "^1.1.1",
+    "ws": "^8.22.0",
     "yaml": "^2"
   },
-  "emulateSourceSha": "46b9fd21c5fad79d02d220232e336104e604e77d"
+  "emulateSourceSha": "c7db3c932568f3546c6166f70a3af7e92aae36bc"
 }

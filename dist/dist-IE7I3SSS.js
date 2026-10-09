@@ -9,6 +9,9 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { timingSafeEqual } from "crypto";
+import { randomUUID as randomUUID2 } from "crypto";
+import { createServer } from "http";
+import { WebSocketServer } from "ws";
 function getSlackStore(store) {
   return {
     teams: store.collection("slack.teams", ["team_id"]),
@@ -39,7 +42,8 @@ function getSlackStore(store) {
     pins: store.collection("slack.pins", ["pin_id", "channel_id", "message_ts"]),
     bookmarks: store.collection("slack.bookmarks", ["bookmark_id", "channel_id"]),
     views: store.collection("slack.views", ["view_id", "user_id", "external_id", "root_view_id"]),
-    viewTriggers: store.collection("slack.view_triggers", ["trigger_id", "user_id", "view_id"])
+    viewTriggers: store.collection("slack.view_triggers", ["trigger_id", "user_id", "view_id"]),
+    usergroups: store.collection("slack.usergroups", ["usergroup_id", "handle"])
   };
 }
 var SLACK_MESSAGE_TEXT_LIMIT = 4e4;
@@ -53,6 +57,21 @@ function generateTs() {
   const now = Math.floor(Date.now() / 1e3);
   tsCounter++;
   return `${now}.${String(tsCounter).padStart(6, "0")}`;
+}
+function slackBotProfile(store, botId) {
+  const ss = getSlackStore(store);
+  const bot = ss.bots.findOneBy("bot_id", botId);
+  if (!bot) return void 0;
+  const image = bot.icons.image_48;
+  return {
+    id: bot.bot_id,
+    ...bot.app_id ? { app_id: bot.app_id } : {},
+    name: bot.name,
+    icons: { image_36: image, image_48: image, image_72: image },
+    deleted: bot.deleted,
+    updated: Math.floor(new Date(bot.updated_at).getTime() / 1e3),
+    team_id: (bot.user_id ? ss.users.findOneBy("user_id", bot.user_id)?.team_id : void 0) ?? ss.teams.all()[0]?.team_id
+  };
 }
 function slackOk(c, data) {
   return c.json({ ok: true, ...data });
@@ -163,6 +182,7 @@ function formatSlackMessage(msg) {
     ts: msg.ts,
     ...msg.subtype ? { subtype: msg.subtype } : {},
     ...msg.bot_id ? { bot_id: msg.bot_id } : {},
+    ...msg.bot_profile ? { bot_profile: msg.bot_profile } : {},
     ...msg.app_id ? { app_id: msg.app_id } : {},
     ...msg.username ? { username: msg.username } : {},
     ...msg.icon_url ? { icon_url: msg.icon_url } : {},
@@ -590,6 +610,9 @@ function chatRoutes(ctx) {
     if (ch.is_archived) return slackError(c, "is_archived");
     if (!canAccessConversation(ch, authUser)) return slackError(c, "not_in_channel");
     const authUserId = getAuthUserId(authUser);
+    const token = c.get("authToken");
+    const botId = richMessage.fields.bot_id ?? (token ? ss().tokens.findOneBy("token", token)?.bot_id : void 0);
+    const botProfile = botId ? slackBotProfile(store, botId) : void 0;
     const ts = generateTs();
     const msg = ss().messages.insert({
       ts,
@@ -598,7 +621,10 @@ function chatRoutes(ctx) {
       text: normalizedText.text,
       type: "message",
       thread_ts,
+      ...thread_ts && richMessage.fields.reply_broadcast ? { subtype: "thread_broadcast" } : {},
       ...richMessage.fields,
+      ...botId ? { bot_id: botId } : {},
+      ...botProfile ? { bot_profile: botProfile, app_id: richMessage.fields.app_id ?? botProfile.app_id } : {},
       reply_count: 0,
       reply_users: [],
       reactions: []
@@ -702,6 +728,10 @@ function chatRoutes(ctx) {
     const msg = ss().messages.all().find((m) => m.ts === ts && m.channel_id === channel);
     if (!msg) return slackError(c, "message_not_found");
     if (!isAuthoredByUser(msg, authUser)) return slackError(c, "cant_update_message");
+    const editWindowMinutes = store.getData("slack.edit_window_minutes");
+    if (editWindowMinutes !== void 0 && Date.now() / 1e3 - Math.floor(Number(msg.ts)) >= editWindowMinutes * 60) {
+      return slackError(c, "edit_window_closed");
+    }
     const updates = { ...richMessage.fields };
     if (hasText) {
       updates.text = normalizedText.text;
@@ -1087,7 +1117,7 @@ function conversationsRoutes(ctx) {
     const channelInfo = formatChannel(ch, authUserId, authSlackUser?.name);
     if (!channelInfo.is_member) return slackOk(c, { channel: channelInfo });
     const lastRead = ch.last_read?.[authUserId] ?? "0000000000.000000";
-    const unread = ss().messages.findBy("channel_id", ch.channel_id).filter((m) => m.ts > lastRead && (!m.thread_ts || m.thread_ts === m.ts));
+    const unread = ss().messages.findBy("channel_id", ch.channel_id).filter((m) => m.ts > lastRead && (!m.thread_ts || m.thread_ts === m.ts || m.subtype === "thread_broadcast"));
     const display = unread.filter((m) => m.user !== authUserId && !m.subtype?.startsWith("channel_")).length;
     return slackOk(c, { channel: { ...channelInfo, unread_count: unread.length, unread_count_display: display } });
   });
@@ -1366,7 +1396,7 @@ function conversationsRoutes(ctx) {
     const authSlackUser = getAuthSlackUser(authUser);
     const authUserId = getAuthUserId(authUser);
     if (!canReadConversation(ch, authSlackUser, authUserId)) return slackError(c, "not_in_channel");
-    const allMessages = ss().messages.findBy("channel_id", channel).filter((m) => !m.thread_ts || m.thread_ts === m.ts).sort((a, b) => b.ts > a.ts ? 1 : -1);
+    const allMessages = ss().messages.findBy("channel_id", channel).filter((m) => !m.thread_ts || m.thread_ts === m.ts || m.subtype === "thread_broadcast").sort((a, b) => b.ts > a.ts ? 1 : -1);
     let startIndex = 0;
     if (cursor) {
       const idx = allMessages.findIndex((m) => m.ts === cursor);
@@ -1804,7 +1834,8 @@ function closeEventType(ch) {
 }
 function markEventType(ch) {
   if (ch.is_im) return "im_marked";
-  if (ch.is_private || ch.is_mpim) return "group_marked";
+  if (ch.is_mpim) return "mpim_marked";
+  if (ch.is_private) return "group_marked";
   return "channel_marked";
 }
 function usersRoutes(ctx) {
@@ -2969,6 +3000,7 @@ function webhookRoutes(ctx) {
     }
     const ts = generateTs();
     const botId = c.req.param("botId");
+    const botProfile = slackBotProfile(store, botId);
     const msg = ss().messages.insert({
       ts,
       channel_id: targetChannel.channel_id,
@@ -2979,6 +3011,7 @@ function webhookRoutes(ctx) {
       thread_ts: threadTs,
       ...richMessage.fields,
       bot_id: botId,
+      ...botProfile ? { bot_profile: botProfile } : {},
       reply_count: 0,
       reply_users: [],
       reactions: []
@@ -4677,6 +4710,235 @@ function renderDeliveriesTable(deliveries, subscriptions, empty) {
     empty
   );
 }
+var SLACK_EMOJI_KEY = "slack.emoji";
+function emojiRoutes({ app, store, webhooks }) {
+  const emoji = () => store.getData(SLACK_EMOJI_KEY) ?? {};
+  app.post("/api/emoji.list", (c) => {
+    if (!c.get("authUser")) return slackError(c, "not_authed");
+    const scopeError = requireSlackScopes(c, store, ["emoji:read"]);
+    if (scopeError) return scopeError;
+    return slackOk(c, { emoji: emoji(), cache_ts: generateTs() });
+  });
+  const change = async (c, next, event) => {
+    store.setData(SLACK_EMOJI_KEY, next);
+    await webhooks.dispatch(
+      "emoji_changed",
+      void 0,
+      buildSlackEventEnvelope(resolveSlackEventTeamId(c, store), {
+        type: "emoji_changed",
+        ...event,
+        event_ts: generateTs()
+      }),
+      "slack"
+    );
+    return slackOk(c, {});
+  };
+  const parse = async (c) => {
+    if (!c.get("authUser")) return { error: slackError(c, "not_authed") };
+    const scopeError = requireSlackScopes(c, store, ["admin.teams:write"]);
+    if (scopeError) return { error: scopeError };
+    const body = await parseSlackBody(c);
+    const name = typeof body.name === "string" ? body.name.replace(/^:|:$/g, "") : "";
+    if (!/^[a-z0-9_+'-]+$/.test(name)) return { error: slackError(c, "invalid_name") };
+    return { body, name, current: emoji() };
+  };
+  app.post("/api/admin.emoji.add", async (c) => {
+    const { error, body, name, current } = await parse(c);
+    if (error) return error;
+    const url = typeof body.url === "string" ? body.url : "";
+    if (!url) return slackError(c, "invalid_arguments");
+    if (current[name]) return slackError(c, "error_name_taken");
+    return change(c, { ...current, [name]: url }, { subtype: "add", name, value: url });
+  });
+  app.post("/api/admin.emoji.addAlias", async (c) => {
+    const { error, body, name, current } = await parse(c);
+    if (error) return error;
+    const target = typeof body.alias_for === "string" ? body.alias_for.replace(/^:|:$/g, "") : "";
+    if (!current[target]) return slackError(c, "emoji_not_found");
+    if (current[name]) return slackError(c, "error_name_taken");
+    const value = `alias:${target}`;
+    return change(c, { ...current, [name]: value }, { subtype: "add", name, value });
+  });
+  app.post("/api/admin.emoji.remove", async (c) => {
+    const { error, name, current } = await parse(c);
+    if (error) return error;
+    if (!current[name]) return slackError(c, "emoji_not_found");
+    const next = Object.fromEntries(
+      Object.entries(current).filter(([key, value]) => key !== name && value !== `alias:${name}`)
+    );
+    const names = Object.keys(current).filter((key) => !(key in next));
+    return change(c, next, { subtype: "remove", names });
+  });
+}
+function usergroupsRoutes({ app, store }) {
+  const ss = () => getSlackStore(store);
+  const truthy = (value) => value === true || value === "true" || value === "1" || value === 1;
+  app.post("/api/usergroups.list", async (c) => {
+    if (!c.get("authUser")) return slackError(c, "not_authed");
+    const scopeError = requireSlackScopes(c, store, ["usergroups:read"]);
+    if (scopeError) return scopeError;
+    const body = await parseSlackBody(c);
+    const includeUsers = truthy(body.include_users);
+    const includeCount = truthy(body.include_count);
+    const usergroups = ss().usergroups.all().filter((group) => truthy(body.include_disabled) || !group.disabled).map((group) => ({
+      ...formatUsergroup(group),
+      ...includeUsers ? { users: group.users } : {},
+      ...includeCount ? { user_count: group.users.length } : {}
+    }));
+    return slackOk(c, { usergroups });
+  });
+  app.post("/api/usergroups.users.list", async (c) => {
+    if (!c.get("authUser")) return slackError(c, "not_authed");
+    const scopeError = requireSlackScopes(c, store, ["usergroups:read"]);
+    if (scopeError) return scopeError;
+    const body = await parseSlackBody(c);
+    const group = ss().usergroups.findOneBy("usergroup_id", typeof body.usergroup === "string" ? body.usergroup : "");
+    if (!group) return slackError(c, "no_such_subteam");
+    if (group.disabled && !truthy(body.include_disabled)) return slackError(c, "subteam_disabled");
+    return slackOk(c, { users: group.users });
+  });
+}
+function formatUsergroup(group) {
+  const created = Math.floor(new Date(group.created_at).getTime() / 1e3);
+  return {
+    id: group.usergroup_id,
+    team_id: group.team_id,
+    is_usergroup: true,
+    is_subteam: true,
+    name: group.name,
+    description: group.description,
+    handle: group.handle,
+    is_external: false,
+    date_create: created,
+    date_update: created,
+    date_delete: group.disabled ? created : 0,
+    auto_type: null,
+    created_by: group.created_by,
+    updated_by: group.created_by,
+    deleted_by: null,
+    prefs: { channels: [], groups: [] },
+    user_count: group.users.length
+  };
+}
+var DISCONNECT_REASONS = ["refresh_requested", "warning", "link_disabled"];
+function socketModeRoutes({ app, store, webhooks }) {
+  const tickets = /* @__PURE__ */ new Map();
+  const connections = [];
+  const unacked = /* @__PURE__ */ new Map();
+  const nextIndex = /* @__PURE__ */ new Map();
+  let listening;
+  const listen = () => listening ??= new Promise((resolve, reject) => {
+    const wss = new WebSocketServer({ noServer: true });
+    const http = createServer((_req, res) => res.writeHead(426).end());
+    http.on("upgrade", (req, socket, head2) => {
+      const url = new URL(req.url ?? "/", "ws://localhost");
+      const ticket = url.searchParams.get("ticket") ?? "";
+      const appId = tickets.get(ticket);
+      if (url.pathname !== "/link/" || !appId) {
+        socket.end("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        return;
+      }
+      tickets.delete(ticket);
+      wss.handleUpgrade(req, socket, head2, (ws) => accept(ws, appId));
+    });
+    http.once("error", reject);
+    http.listen(0, "127.0.0.1", () => resolve({ http, port: http.address().port }));
+  });
+  const accept = (socket, appId) => {
+    const connection = { id: randomUUID2(), appId, socket, connectedAt: Math.floor(Date.now() / 1e3) };
+    connections.push(connection);
+    const ping = setInterval(() => socket.ping(), 1e4).unref();
+    socket.on("message", (data) => {
+      let frame;
+      try {
+        frame = JSON.parse(String(data));
+      } catch {
+        socket.close(1007, "frames must be JSON");
+        return;
+      }
+      if (frame.envelope_id) unacked.delete(frame.envelope_id);
+    });
+    socket.on("close", () => {
+      clearInterval(ping);
+      const index = connections.indexOf(connection);
+      if (index >= 0) connections.splice(index, 1);
+    });
+    socket.send(
+      JSON.stringify({
+        type: "hello",
+        num_connections: connections.filter((c) => c.appId === appId).length,
+        debug_info: { host: "emulate", build_number: 1, approximate_connection_time: 18060 },
+        connection_info: { app_id: appId }
+      })
+    );
+  };
+  const deliver = (payload) => {
+    for (const appId of new Set(connections.map((c) => c.appId))) {
+      const candidates = connections.filter((c) => c.appId === appId);
+      const index = (nextIndex.get(appId) ?? 0) % candidates.length;
+      nextIndex.set(appId, index + 1);
+      const envelopeId = randomUUID2();
+      unacked.set(envelopeId, { app_id: appId, event_type: payload.event?.type });
+      candidates[index].socket.send(
+        JSON.stringify({
+          envelope_id: envelopeId,
+          payload: { ...payload, api_app_id: appId },
+          type: "events_api",
+          accepts_response_payload: false,
+          retry_attempt: 0,
+          retry_reason: ""
+        })
+      );
+    }
+  };
+  const dispatch = webhooks.dispatch.bind(webhooks);
+  webhooks.dispatch = async (event, action, payload, owner, repo) => {
+    const envelope = payload;
+    if (owner === "slack" && envelope?.type === "event_callback") deliver(envelope);
+    return dispatch(event, action, payload, owner, repo);
+  };
+  const appIdForToken = (c) => {
+    const token = (c.req.header("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+    if (!token.startsWith("xapp-")) return { error: token ? "not_allowed_token_type" : "not_authed" };
+    const ss = getSlackStore(store);
+    const record = ss.tokens.findOneBy("token", token);
+    const appId = record?.app_id ?? (record?.client_id ? ss.oauthApps.findOneBy("client_id", record.client_id)?.app_id : void 0);
+    return appId ? { appId } : { error: "invalid_auth" };
+  };
+  app.post("/api/apps.connections.open", async (c) => {
+    const { appId, error } = appIdForToken(c);
+    if (!appId) return slackError(c, error);
+    const { port } = await listen();
+    const ticket = randomUUID2();
+    tickets.set(ticket, appId);
+    return slackOk(c, { url: `ws://127.0.0.1:${port}/link/?ticket=${ticket}&app_id=${appId}` });
+  });
+  app.get(
+    "/_slack/socket_mode",
+    (c) => c.json({
+      connections: connections.map((conn) => ({ id: conn.id, app_id: conn.appId, connected_at: conn.connectedAt })),
+      unacked: [...unacked].map(([envelope_id, info]) => ({ envelope_id, ...info }))
+    })
+  );
+  app.post("/_slack/socket_mode/disconnect", async (c) => {
+    const body = await parseSlackBody(c);
+    const reason = typeof body.reason === "string" ? body.reason : "refresh_requested";
+    if (!DISCONNECT_REASONS.includes(reason)) {
+      return c.json({ error: `reason must be one of ${DISCONNECT_REASONS.join(", ")}` }, 400);
+    }
+    const targets = connections.filter((conn) => !body.app_id || conn.appId === body.app_id);
+    for (const conn of targets) {
+      conn.socket.send(JSON.stringify({ type: "disconnect", reason, debug_info: { host: "emulate" } }));
+      if (reason !== "warning") conn.socket.close();
+    }
+    return c.json({ disconnected: targets.length });
+  });
+  return async () => {
+    for (const conn of [...connections]) conn.socket.terminate();
+    const server = await listening?.catch(() => void 0);
+    if (server) await new Promise((resolve) => server.http.close(() => resolve()));
+  };
+}
 var DEFAULT_SLACK_SCOPES = [
   "chat:write",
   "channels:read",
@@ -4707,7 +4969,9 @@ var DEFAULT_SLACK_SCOPES = [
   "reactions:read",
   "reactions:write",
   "team:read",
-  "search:read"
+  "search:read",
+  "emoji:read",
+  "usergroups:read"
 ];
 function slackWebhookHeaders(store, { body }) {
   const headers = {
@@ -4885,12 +5149,15 @@ function seedFromConfig(store, _baseUrl, config, webhooks) {
   if (config.bots) {
     for (const b of config.bots) {
       const existing = ss.bots.all().find((eb) => eb.name === b.name);
-      if (existing) continue;
+      if (existing) {
+        if (b.icon) ss.bots.update(existing.id, { icons: { image_48: b.icon } });
+        continue;
+      }
       ss.bots.insert({
         bot_id: generateSlackId("B"),
         name: b.name,
         deleted: false,
-        icons: { image_48: "" }
+        icons: { image_48: b.icon ?? "" }
       });
     }
   }
@@ -4913,7 +5180,8 @@ function seedFromConfig(store, _baseUrl, config, webhooks) {
         user_scopes: normalizeScopes2(oa.user_scopes),
         bot_id: oa.bot_id,
         bot_user_id: oa.bot_user_id,
-        bot_name: oa.bot_name
+        bot_name: oa.bot_name,
+        bot_icon: oa.bot_icon
       });
     }
     const installer = ss.users.all().find((user) => !user.deleted && !user.is_bot) ?? ss.users.all()[0];
@@ -4966,6 +5234,33 @@ function seedFromConfig(store, _baseUrl, config, webhooks) {
     });
     ss.channels.update(channel.id, { members, num_members: members.length });
   }
+  if (config.emoji) {
+    store.setData(SLACK_EMOJI_KEY, {
+      ...store.getData(SLACK_EMOJI_KEY) ?? {},
+      ...config.emoji
+    });
+  }
+  for (const group of config.usergroups ?? []) {
+    if (ss.usergroups.findOneBy("handle", group.handle)) continue;
+    const users = (group.users ?? []).map((ref) => {
+      const user = ss.users.findOneBy("user_id", ref) ?? ss.users.findOneBy("name", ref);
+      if (!user) throw new Error(`Slack seed usergroup ${group.handle} lists unknown user ${ref}`);
+      return user.user_id;
+    });
+    ss.usergroups.insert({
+      usergroup_id: group.id ?? generateSlackId("S"),
+      team_id: teamId,
+      handle: group.handle,
+      name: group.name ?? group.handle,
+      description: group.description ?? "",
+      users,
+      created_by: ss.users.all()[0]?.user_id ?? "U000000001",
+      disabled: group.disabled ?? false
+    });
+  }
+  if (config.edit_window_minutes !== void 0) {
+    store.setData("slack.edit_window_minutes", config.edit_window_minutes);
+  }
   if (config.signing_secret !== void 0) {
     store.setData("slack.signing_secret", config.signing_secret);
   }
@@ -5008,7 +5303,11 @@ var slackPlugin = {
     pinsRoutes(ctx);
     bookmarksRoutes(ctx);
     viewsRoutes(ctx);
+    emojiRoutes(ctx);
+    usergroupsRoutes(ctx);
+    const closeSocketMode = socketModeRoutes(ctx);
     inspectorRoutes(ctx);
+    return closeSocketMode;
   },
   seed(store, baseUrl) {
     seedDefaults(store, baseUrl);
@@ -5047,6 +5346,7 @@ function seedOAuthInstallation(ss, teamId, installerUserId, app) {
   const botName = app.bot_name ?? slugifySlackBotName(app.name);
   const existingBot = (app.bot_id ? ss.bots.findOneBy("bot_id", app.bot_id) : void 0) ?? ss.bots.all().find((bot2) => bot2.name === botName);
   const botId = app.bot_id ?? existingBot?.bot_id ?? generateSlackId("B");
+  const icon = app.bot_icon ?? existingBot?.icons.image_48 ?? "";
   const botUserId = app.bot_user_id ?? existingBot?.user_id ?? generateSlackId("U");
   const bot = existingBot ?? ss.bots.insert({
     bot_id: botId,
@@ -5054,10 +5354,10 @@ function seedOAuthInstallation(ss, teamId, installerUserId, app) {
     user_id: botUserId,
     name: botName,
     deleted: false,
-    icons: { image_48: "" }
+    icons: { image_48: icon }
   });
-  if (bot.app_id !== appId || bot.user_id !== botUserId) {
-    ss.bots.update(bot.id, { app_id: appId, user_id: botUserId });
+  if (bot.app_id !== appId || bot.user_id !== botUserId || bot.icons.image_48 !== icon) {
+    ss.bots.update(bot.id, { app_id: appId, user_id: botUserId, icons: { image_48: icon } });
   }
   if (!app.bot_id || !app.bot_user_id || !app.bot_name) {
     ss.oauthApps.update(app.id, {
@@ -5080,8 +5380,8 @@ function seedOAuthInstallation(ss, teamId, installerUserId, app) {
         display_name: botName,
         real_name: app.name,
         email: `${botName}@bots.emulate.dev`,
-        image_48: "",
-        image_192: "",
+        image_48: icon,
+        image_192: icon,
         real_name_normalized: app.name,
         display_name_normalized: botName,
         status_text: "",
@@ -5164,4 +5464,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-4XOYIXLQ.js.map
+//# sourceMappingURL=dist-IE7I3SSS.js.map
