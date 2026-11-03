@@ -1225,3 +1225,186 @@ describe("Slack plugin - event dispatch baseline", () => {
     ]);
   });
 });
+
+describe("Slack plugin - app identity on events and bot messages", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const BOT_TOKEN = "xoxb-identity-bot";
+
+  function setupBotApp(subscriptionAppId?: string) {
+    const setup = createSlackTestApp();
+    const { store, webhooks } = setup;
+    seedFromConfig(
+      store,
+      base,
+      {
+        oauth_apps: [
+          {
+            app_id: "A0IDENTITY",
+            client_id: "1.1",
+            client_secret: "secret",
+            name: "identity",
+            redirect_uris: ["http://localhost/cb"],
+            bot_id: "BIDENTITY1",
+            bot_user_id: "UIDENTITY1",
+          },
+        ],
+        tokens: [
+          {
+            token: BOT_TOKEN,
+            type: "bot",
+            user: "UIDENTITY1",
+            bot_id: "BIDENTITY1",
+            bot_user_id: "UIDENTITY1",
+            scopes: ["chat:write", "files:write", "channels:history"],
+          },
+        ],
+        event_subscriptions: [{ url: "https://hooks.example/eve", app_id: subscriptionAppId }],
+      },
+      webhooks,
+    );
+    const ss = getSlackStore(store);
+    const general = ss.channels.findOneBy("name", "general")!;
+    ss.channels.update(general.id, { members: [...general.members, "UIDENTITY1"] });
+    const teamId = ss.users.findOneBy("user_id", "UIDENTITY1")!.team_id;
+    const botHeaders = { Authorization: `Bearer ${BOT_TOKEN}`, "Content-Type": "application/json" };
+    return { ...setup, channel: general.channel_id, teamId, botHeaders };
+  }
+
+  it("stamps api_app_id and the bot authorization on every event_callback", async () => {
+    const { app, channel, teamId } = setupBotApp();
+    const capture = captureFetchRequests(teamId);
+
+    const res = await app.request(`${base}/api/chat.postMessage`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ channel, text: "from a human" }),
+    });
+    expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
+
+    const [envelope] = capture.jsonBodies();
+    expect(envelope).toMatchObject({
+      api_app_id: "A0IDENTITY",
+      authorizations: [
+        { enterprise_id: null, team_id: teamId, user_id: "UIDENTITY1", is_bot: true, is_enterprise_install: false },
+      ],
+      event: { type: "message", user: "U000000001" },
+    });
+    expect((envelope as { event: Record<string, unknown> }).event.bot_id).toBeUndefined();
+  });
+
+  it("marks bot-posted messages with bot_id, app_id, bot_profile and the bot user", async () => {
+    const { app, channel, teamId, botHeaders } = setupBotApp();
+    const capture = captureFetchRequests(teamId);
+
+    const res = await app.request(`${base}/api/chat.postMessage`, {
+      method: "POST",
+      headers: botHeaders,
+      body: JSON.stringify({ channel, text: "from the bot" }),
+    });
+    const posted = (await res.json()) as { ok: boolean; ts: string; message: Record<string, unknown> };
+    expect(posted.ok).toBe(true);
+
+    const identity = {
+      user: "UIDENTITY1",
+      bot_id: "BIDENTITY1",
+      app_id: "A0IDENTITY",
+      bot_profile: { id: "BIDENTITY1", app_id: "A0IDENTITY", name: "identity", team_id: teamId },
+    };
+    expect(posted.message).toMatchObject(identity);
+
+    const [envelope] = capture.jsonBodies() as Array<{ api_app_id: string; event: Record<string, unknown> }>;
+    expect(envelope.event).toMatchObject(identity);
+    expect(envelope.event.app_id).toBe(envelope.api_app_id);
+
+    const history = await app.request(`${base}/api/conversations.history`, {
+      method: "POST",
+      headers: botHeaders,
+      body: JSON.stringify({ channel }),
+    });
+    const { messages } = (await history.json()) as { messages: Array<Record<string, unknown>> };
+    expect(messages.find((message) => message.ts === posted.ts)).toMatchObject(identity);
+  });
+
+  it("marks bot file shares with the bot identity", async () => {
+    const { app, channel, teamId, botHeaders } = setupBotApp();
+    const capture = captureFetchRequests(teamId);
+
+    const upload = (await (
+      await app.request(`${base}/api/files.getUploadURLExternal`, {
+        method: "POST",
+        headers: botHeaders,
+        body: JSON.stringify({ filename: "report.txt", length: 2 }),
+      })
+    ).json()) as { file_id: string; upload_url: string };
+    await app.request(upload.upload_url, { method: "POST", body: "ok" });
+    const completed = await app.request(`${base}/api/files.completeUploadExternal`, {
+      method: "POST",
+      headers: botHeaders,
+      body: JSON.stringify({ files: [{ id: upload.file_id }], channel_id: channel, initial_comment: "report" }),
+    });
+    expect(((await completed.json()) as { ok: boolean }).ok).toBe(true);
+
+    const share = (capture.jsonBodies() as Array<{ event: Record<string, unknown> }>).find(
+      (body) => body.event.type === "message",
+    );
+    expect(share?.event).toMatchObject({
+      subtype: "file_share",
+      user: "UIDENTITY1",
+      bot_id: "BIDENTITY1",
+      app_id: "A0IDENTITY",
+    });
+  });
+
+  it("delivers each subscription the identity of the app it belongs to", async () => {
+    const { store, webhooks, app, channel } = setupBotApp("A0IDENTITY");
+    seedFromConfig(store, base, {
+      oauth_apps: [
+        {
+          app_id: "A0OTHER",
+          client_id: "2.2",
+          client_secret: "secret",
+          name: "other",
+          redirect_uris: ["http://localhost/cb"],
+          bot_user_id: "UOTHERBOT1",
+        },
+      ],
+    });
+    webhooks.register({ url: "https://hooks.example/untied", events: ["*"], active: true, owner: "slack" });
+    const capture = captureRawFetchRequests();
+
+    await app.request(`${base}/api/chat.postMessage`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ channel, text: "two apps" }),
+    });
+
+    const appsByUrl = (url: string) =>
+      capture.requests
+        .filter((request) => request.url === url)
+        .map((request) => JSON.parse(String(request.init.body)) as { api_app_id: string; authorizations: unknown });
+    expect(appsByUrl("https://hooks.example/eve")).toMatchObject([
+      { api_app_id: "A0IDENTITY", authorizations: [{ user_id: "UIDENTITY1" }] },
+    ]);
+    expect(
+      appsByUrl("https://hooks.example/untied")
+        .map((body) => body.api_app_id)
+        .sort(),
+    ).toEqual(["A0IDENTITY", "A0OTHER"]);
+  });
+
+  it("rejects an event subscription tied to an unknown app", () => {
+    const { store, webhooks } = createSlackTestApp();
+    expect(() =>
+      seedFromConfig(
+        store,
+        base,
+        { event_subscriptions: [{ url: "https://hooks.example/x", app_id: "ANOPE" }] },
+        webhooks,
+      ),
+    ).toThrow(/unknown app ANOPE/);
+  });
+});

@@ -187,6 +187,20 @@ export async function parseSlackBody(c: Context): Promise<Record<string, unknown
   return result;
 }
 
+export function slackTokenBotMessageFields(
+  c: Context,
+  store: Store,
+  authUserId: string,
+  teamId: string,
+): Partial<SlackMessage> {
+  const ss = getSlackStore(store);
+  const token = c.get("authToken");
+  const record = token ? ss.tokens.findOneBy("token", token) : undefined;
+  if (record?.token_type !== "bot") return {};
+  const botId = record.bot_id ?? ss.bots.all().find((bot) => bot.user_id === authUserId)?.bot_id;
+  return botId ? slackBotMessageFields(store, botId, teamId, record.app_id) : {};
+}
+
 export function slackBotMessageFields(
   store: Store,
   botId: string,

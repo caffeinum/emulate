@@ -26,6 +26,7 @@ import {
   slackError,
   slackMessageTextResponseMetadata,
   slackOk,
+  slackTokenBotMessageFields,
 } from "../helpers.js";
 
 export function filesRoutes(ctx: RouteContext): void {
@@ -282,6 +283,7 @@ export function filesRoutes(ctx: RouteContext): void {
           subtype: "file_share",
           thread_ts: threadTs,
           blocks,
+          ...slackTokenBotMessageFields(c, store, authUserId, channel.team_id),
           files: updatedFiles,
           upload: true,
           reply_count: 0,

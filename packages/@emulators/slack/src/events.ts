@@ -19,12 +19,10 @@ export async function dispatchSlackEvent(
     ...event,
   };
   for (const installation of installations.length > 0 ? installations : [undefined]) {
-    await webhooks.dispatch(
-      String(event.type),
-      undefined,
-      buildSlackEventEnvelope(store, teamId, normalizedEvent, installation),
-      "slack",
-    );
+    const envelope = buildSlackEventEnvelope(store, teamId, normalizedEvent, installation);
+    await webhooks.dispatch(String(event.type), undefined, envelope, "slack");
+    // Subscriptions seeded with an app_id are scoped by it and receive only that app's envelopes.
+    if (installation) await webhooks.dispatch(String(event.type), undefined, envelope, "slack", installation.app_id);
   }
 }
 

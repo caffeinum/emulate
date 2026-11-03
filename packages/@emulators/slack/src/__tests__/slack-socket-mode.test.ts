@@ -71,7 +71,11 @@ it("delivers events to the Slack SDK socket client, tracks acks, and reconnects 
     const posted = await call("chat.postMessage", "xoxb-relay", { channel: "C000000001", text: "hello socket" });
     await call("chat.postMessage", "xoxb-relay", { channel: "C000000001", text: "do not ack" });
     await until(() => received.length === 2);
-    expect(received[0].body).toMatchObject({ type: "event_callback", api_app_id: "A0RELAY" });
+    expect(received[0].body).toMatchObject({
+      type: "event_callback",
+      api_app_id: "A0RELAY",
+      authorizations: [{ user_id: "U0RELAYBOT", is_bot: true }],
+    });
     expect(received[0].event).toMatchObject({ type: "message", text: "hello socket", channel: "C000000001" });
     await until(async () => (await state()).unacked.length === 1);
 
