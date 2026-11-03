@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import {
   createProgram
-} from "./chunk-VFUUOBLW.js";
+} from "./chunk-N3BMOE7X.js";
 import {
   ensurePortless,
   prepareProject,
   registerAliases,
   removeAliases,
   resolveEnv
-} from "./chunk-4BPNIDAC.js";
+} from "./chunk-X37XRSOG.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
@@ -70,7 +70,7 @@ program.command("run").description("Start the configured emulators, run a comman
   process.exitCode = await runCommand({ ...opts, port: Number(opts.port) }, command);
 });
 program.command("mcp").description("Start the MCP server over stdio").action(async () => {
-  await (await import("./mcp-NFUCV7CG.js")).startMcpServer();
+  await (await import("./mcp-MOCYADMC.js")).startMcpServer();
 });
 try {
   await program.parseAsync();

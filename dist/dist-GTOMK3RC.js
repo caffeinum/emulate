@@ -156,6 +156,14 @@ async function parseSlackBody(c) {
   }
   return result;
 }
+function slackTokenBotMessageFields(c, store, authUserId, teamId) {
+  const ss = getSlackStore(store);
+  const token = c.get("authToken");
+  const record = token ? ss.tokens.findOneBy("token", token) : void 0;
+  if (record?.token_type !== "bot") return {};
+  const botId = record.bot_id ?? ss.bots.all().find((bot) => bot.user_id === authUserId)?.bot_id;
+  return botId ? slackBotMessageFields(store, botId, teamId, record.app_id) : {};
+}
 function slackBotMessageFields(store, botId, teamId, appId) {
   const bot = getSlackStore(store).bots.findOneBy("bot_id", botId);
   const resolvedAppId = appId ?? bot?.app_id;
@@ -897,12 +905,9 @@ async function dispatchSlackEvent(store, webhooks, teamId, event, recipient) {
     ...event
   };
   for (const installation of installations.length > 0 ? installations : [void 0]) {
-    await webhooks.dispatch(
-      String(event.type),
-      void 0,
-      buildSlackEventEnvelope(store, teamId, normalizedEvent, installation),
-      "slack"
-    );
+    const envelope = buildSlackEventEnvelope(store, teamId, normalizedEvent, installation);
+    await webhooks.dispatch(String(event.type), void 0, envelope, "slack");
+    if (installation) await webhooks.dispatch(String(event.type), void 0, envelope, "slack", installation.app_id);
   }
 }
 function buildSlackEventEnvelope(store, teamId, event, installation) {
@@ -1122,10 +1127,6 @@ function chatRoutes(ctx) {
     if (!canAccessConversation(ch, authUser)) return slackError(c, "not_in_channel");
     const authUserId = getAuthUserId(authUser);
     const ts = generateTs();
-    const token = c.get("authToken");
-    const authToken = token ? ss().tokens.findOneBy("token", token) : void 0;
-    const bot = authToken?.token_type === "bot" ? ss().bots.all().find((bot2) => bot2.bot_id === authToken.bot_id || bot2.user_id === authUserId) : void 0;
-    const botId = authToken?.token_type === "bot" ? authToken.bot_id ?? bot?.bot_id : void 0;
     const msg = ss().messages.insert({
       ts,
       interaction_app_id: messageAppId(c),
@@ -1136,7 +1137,7 @@ function chatRoutes(ctx) {
       thread_ts,
       ...thread_ts && richMessage.fields.reply_broadcast ? { subtype: "thread_broadcast" } : {},
       ...richMessage.fields,
-      ...botId ? slackBotMessageFields(store, botId, ch.team_id, authToken?.app_id) : {},
+      ...slackTokenBotMessageFields(c, store, authUserId, ch.team_id),
       reply_count: 0,
       reply_users: [],
       reactions: []
@@ -3371,6 +3372,7 @@ function filesRoutes(ctx) {
           subtype: "file_share",
           thread_ts: threadTs,
           blocks,
+          ...slackTokenBotMessageFields(c, store, authUserId, channel.team_id),
           files: updatedFiles,
           upload: true,
           reply_count: 0,
@@ -5401,7 +5403,7 @@ function socketModeRoutes({ app, store, webhooks }) {
   const dispatch = webhooks.dispatch.bind(webhooks);
   webhooks.dispatch = async (event, action, payload, owner, repo) => {
     const envelope = payload;
-    if (owner === "slack" && envelope?.type === "event_callback") deliver(envelope);
+    if (owner === "slack" && repo === void 0 && envelope?.type === "event_callback") deliver(envelope);
     return dispatch(event, action, payload, owner, repo);
   };
   const appIdForToken = (c) => {
@@ -5782,11 +5784,15 @@ function seedFromConfig(store, _baseUrl, config, webhooks) {
       if (typeof subscription.url !== "string" || !subscription.url) {
         throw new Error("slack.event_subscriptions entries require a url");
       }
+      if (subscription.app_id && !ss.oauthApps.findOneBy("app_id", subscription.app_id)) {
+        throw new Error(`slack.event_subscriptions entry ${subscription.url} names unknown app ${subscription.app_id}`);
+      }
       webhooks.register({
         url: subscription.url,
         events: subscription.events ?? ["*"],
         active: true,
-        owner: "slack"
+        owner: "slack",
+        ...subscription.app_id ? { repo: subscription.app_id } : {}
       });
     }
   }
@@ -5974,4 +5980,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-PDLUNAAT.js.map
+//# sourceMappingURL=dist-GTOMK3RC.js.map

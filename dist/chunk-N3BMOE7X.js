@@ -12,7 +12,7 @@ import {
   publishGeneratedSecretsFile,
   registerAliases,
   removeAliases
-} from "./chunk-4BPNIDAC.js";
+} from "./chunk-X37XRSOG.js";
 
 // src/program.ts
 import { Command } from "commander";
@@ -873,6 +873,7 @@ Microsoft OAuth coverage:
 Webhook signatures:
   Stripe webhook secrets produce a Stripe-Signature header for raw-body verification.
   Slack event_subscriptions in seed config register request URLs for outbound event callbacks.
+  An event_subscriptions app_id limits a URL to that app's envelopes.
   Slack signing_secret produces X-Slack-Request-Timestamp and X-Slack-Signature for outbound event callbacks.
   The Slack signature covers v0:<timestamp>:<raw-body>; configure the receiver with the same secret.
   Slack callbacks are unsigned when signing_secret is absent or empty.
@@ -971,4 +972,4 @@ function parsePort(value) {
 export {
   createProgram
 };
-//# sourceMappingURL=chunk-VFUUOBLW.js.map
+//# sourceMappingURL=chunk-N3BMOE7X.js.map
