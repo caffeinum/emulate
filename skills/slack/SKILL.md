@@ -243,7 +243,7 @@ slack:
 - Socket Mode: `apps.connections.open` with an `xapp-` token returns a one-time `ws://127.0.0.1:<port>/link/?ticket=...` url. The socket sends `hello`, then every event the emulator dispatches as an `events_api` envelope (one connection per app gets each envelope) and expects `{"envelope_id"}` acks. `GET /_slack/socket_mode` lists connections and unacked envelopes; `POST /_slack/socket_mode/disconnect` with an optional `reason` (`refresh_requested` by default, `warning`, `link_disabled`) and `app_id` sends a `disconnect` frame, closing the socket unless the reason is `warning`. Works with `@slack/socket-mode` and Bolt.
 - `emoji.list` returns the seeded `emoji` map. `admin.emoji.add`, `admin.emoji.addAlias`, and `admin.emoji.remove` change it and dispatch `emoji_changed`.
 - `usergroups.list` (`include_users`, `include_count`, `include_disabled`) and `usergroups.users.list` read the seeded `usergroups`.
-- Messages posted with a bot token, or with `bot_id`, carry `bot_id`, `app_id`, and `bot_profile`. Set the icon with `bot_icon` on an OAuth app or `icon` on a `bots` entry.
+- Messages and file shares posted with a bot token, or with `bot_id`, carry `bot_id`, `app_id`, and `bot_profile`. Set the icon with `bot_icon` on an OAuth app or `icon` on a `bots` entry.
 - `reply_broadcast: true` on a thread reply gives it subtype `thread_broadcast`, and it shows in `conversations.history`.
 - With `edit_window_minutes`, `chat.update` returns `edit_window_closed` for messages older than the window (`0` closes it immediately).
 - `conversations.mark` sets the `last_read` that `conversations.info` returns, and dispatches `channel_marked`, `group_marked`, `im_marked`, or `mpim_marked`.
@@ -254,7 +254,7 @@ For clients: `users.conversations` lists the caller's conversations, `conversati
 
 When no OAuth apps are configured, the emulator accepts any `client_id`. With apps configured, strict validation is enforced for `client_id`, `client_secret`, and `redirect_uri`.
 
-`event_subscriptions` registers Events API request URLs. The emulator POSTs each `event_callback` envelope to every matching `url`; omit `events` to receive all event types.
+`event_subscriptions` registers Events API request URLs. The emulator POSTs each `event_callback` envelope to every matching `url`; omit `events` to receive all event types. Subscriptions receive one envelope per installation, each with that app's `api_app_id` and `authorizations`. Set `app_id` on an entry to deliver only that app's envelopes to its URL.
 
 `signing_secret` signs every outbound event subscription callback. Configure the receiving app with the same secret; signed callbacks include `X-Slack-Request-Timestamp` and `X-Slack-Signature`, with `X-Slack-Signature` set to `v0=<HMAC-SHA256(secret, "v0:<timestamp>:<raw-body>")>`. Verify against the unparsed request body. When the secret is absent or empty, callbacks are unsigned.
 

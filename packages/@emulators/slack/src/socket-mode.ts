@@ -107,7 +107,7 @@ export function socketModeRoutes({ app, store, webhooks }: RouteContext): () => 
   const dispatch = webhooks.dispatch.bind(webhooks);
   webhooks.dispatch = async (event, action, payload, owner, repo) => {
     const envelope = payload as Record<string, unknown> | undefined;
-    if (owner === "slack" && envelope?.type === "event_callback") deliver(envelope);
+    if (owner === "slack" && repo === undefined && envelope?.type === "event_callback") deliver(envelope);
     return dispatch(event, action, payload, owner, repo);
   };
 
