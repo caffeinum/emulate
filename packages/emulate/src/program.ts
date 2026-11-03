@@ -4,14 +4,12 @@ import { listCommand } from "./commands/list.js";
 import { SERVICE_NAMES } from "./registry.js";
 import { projectStartCommand } from "./commands/project-start.js";
 import { scaffoldCommand } from "./commands/scaffold.js";
-import { runCommand } from "./commands/run.js";
 
 declare const PKG_VERSION: string;
 
 export function createProgram(): Command {
   const defaultPort = process.env.EMULATE_PORT ?? process.env.PORT ?? "4000";
   const program = new Command();
-  program.enablePositionalOptions();
 
   program
     .name("emulate")
@@ -203,20 +201,6 @@ Slack event callbacks:
         portless: opts.portless,
         generatedSecretsFile: opts.generatedSecretsFile,
       });
-    });
-
-  program
-    .command("run")
-    .description("Start the configured emulators, run a command with the config's env, then stop them")
-    .argument("<command...>", "Command to run, e.g. pnpm dev")
-    .option("-p, --port <port>", "Base port; 0 picks a free port per service", process.env.EMULATE_PORT ?? "4000")
-    .option("-s, --service <services>", "Comma-separated services to enable")
-    .option("--config <file>", "Path to TypeScript, JavaScript, YAML, or JSON configuration")
-    .option("--portless", "Serve over HTTPS via portless (auto-registers aliases)")
-    .option("--scenario <name>", "Overlay scenarios.<name> from the config")
-    .passThroughOptions()
-    .action(async (command: string[], opts) => {
-      process.exitCode = await runCommand({ ...opts, port: Number(opts.port) }, command);
     });
 
   program
