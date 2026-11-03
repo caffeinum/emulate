@@ -1,22 +1,57 @@
 import {
   prepareProject
-} from "./chunk-MFVJZSOM.js";
+} from "./chunk-4BPNIDAC.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
 // src/project-worker.ts
 var run;
+var preparing;
+var controller = new AbortController();
+var closing;
+function close() {
+  return closing ??= (async () => {
+    controller.abort(new Error("Emulator startup stopped"));
+    await preparing?.catch((error) => {
+      if (error instanceof AggregateError) throw error;
+    });
+    await run?.close();
+  })();
+}
 var handling = Promise.resolve();
 process.on(
   "message",
   (message) => {
+    if (message.type === "close") {
+      void close().then(
+        () => {
+          if (process.connected) {
+            process.send?.({ type: "closed" }, () => {
+              if (process.connected) process.disconnect();
+            });
+          }
+        },
+        (error) => {
+          if (process.connected)
+            process.send?.({ type: "error", error: error instanceof Error ? error.stack : String(error) });
+        }
+      );
+      return;
+    }
     handling = handling.then(async () => {
       try {
+        controller.signal.throwIfAborted();
         if (message.type === "prepare") {
-          run = await prepareProject(message.options, message.retained, message.reload, (dependencies) => {
-            if (process.connected) process.send?.({ type: "dependencies", dependencies }, () => {
-            });
-          });
+          run = await (preparing = prepareProject(
+            message.options,
+            message.retained,
+            message.reload,
+            (dependencies) => {
+              if (process.connected) process.send?.({ type: "dependencies", dependencies }, () => {
+              });
+            },
+            controller.signal
+          ));
           process.send?.({ type: "prepared", metadata: run.metadata });
         } else if (message.type === "start") {
           run.watchDependencies((dependencies) => {
@@ -25,20 +60,17 @@ process.on(
           });
           await run.start();
           process.send?.({ type: "started" });
-        } else if (message.type === "close") {
-          await run?.close();
-          process.send?.({ type: "closed" });
-          process.disconnect();
         }
       } catch (error) {
-        process.send?.({ type: "error", error: error instanceof Error ? error.stack : String(error) });
+        if (process.connected && !controller.signal.aborted)
+          process.send?.({ type: "error", error: error instanceof Error ? error.stack : String(error) });
       }
     });
   }
 );
 process.on("disconnect", () => {
   const timer = setTimeout(() => process.exit(1), 7e3);
-  void (run?.close() ?? Promise.resolve()).catch(console.error).finally(() => {
+  void close().catch(console.error).finally(() => {
     clearTimeout(timer);
     process.exit(0);
   });

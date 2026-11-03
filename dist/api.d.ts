@@ -122,6 +122,8 @@ interface WebhookDelivery {
     delivered_at: string;
     duration: number | null;
     success: boolean;
+    redelivery_of?: number;
+    redelivery_count?: number;
 }
 interface WebhookHeaderContext {
     event: string;
@@ -151,6 +153,10 @@ declare class WebhookDispatcher {
     getSubscriptions(owner?: string, repo?: string): WebhookSubscription[];
     updateSubscription(id: number, data: Partial<Pick<WebhookSubscription, "url" | "events" | "active" | "secret">>): WebhookSubscription | undefined;
     dispatch(event: string, action: string | undefined, payload: unknown, owner: string, repo?: string): Promise<void>;
+    redeliver(deliveryId: number, options?: {
+        headers?: Record<string, string>;
+    }): Promise<WebhookDelivery | undefined>;
+    private deliver;
     getDeliveries(hookId?: number): WebhookDelivery[];
     clear(): void;
 }
