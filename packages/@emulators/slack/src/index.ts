@@ -115,6 +115,7 @@ export interface SlackSeedConfig {
   event_subscriptions?: Array<{
     url: string;
     events?: string[];
+    app_id?: string;
   }>;
 }
 
@@ -499,11 +500,15 @@ export function seedFromConfig(
       if (typeof subscription.url !== "string" || !subscription.url) {
         throw new Error("slack.event_subscriptions entries require a url");
       }
+      if (subscription.app_id && !ss.oauthApps.findOneBy("app_id", subscription.app_id)) {
+        throw new Error(`slack.event_subscriptions entry ${subscription.url} names unknown app ${subscription.app_id}`);
+      }
       webhooks.register({
         url: subscription.url,
         events: subscription.events ?? ["*"],
         active: true,
         owner: "slack",
+        ...(subscription.app_id ? { repo: subscription.app_id } : {}),
       });
     }
   }
