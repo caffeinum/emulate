@@ -22,7 +22,7 @@ import {
   requireSlackScopes,
   setSlackConversationOpenState,
   slackError,
-  slackBotMessageFields,
+  slackTokenBotMessageFields,
   slackMessageTextResponseMetadata,
   slackOk,
 } from "../helpers.js";
@@ -185,15 +185,6 @@ export function chatRoutes(ctx: RouteContext): void {
     const authUserId = getAuthUserId(authUser);
 
     const ts = generateTs();
-    const token = c.get("authToken");
-    const authToken = token ? ss().tokens.findOneBy("token", token) : undefined;
-    const bot =
-      authToken?.token_type === "bot"
-        ? ss()
-            .bots.all()
-            .find((bot) => bot.bot_id === authToken.bot_id || bot.user_id === authUserId)
-        : undefined;
-    const botId = authToken?.token_type === "bot" ? (authToken.bot_id ?? bot?.bot_id) : undefined;
     const msg = ss().messages.insert({
       ts,
       interaction_app_id: messageAppId(c),
@@ -204,7 +195,7 @@ export function chatRoutes(ctx: RouteContext): void {
       thread_ts,
       ...(thread_ts && richMessage.fields.reply_broadcast ? { subtype: "thread_broadcast" } : {}),
       ...richMessage.fields,
-      ...(botId ? slackBotMessageFields(store, botId, ch.team_id, authToken?.app_id) : {}),
+      ...slackTokenBotMessageFields(c, store, authUserId, ch.team_id),
       reply_count: 0,
       reply_users: [],
       reactions: [],
