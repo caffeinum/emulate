@@ -29,6 +29,7 @@ vi.mock("../project-watcher.js", () => ({
 function metadata(): RunMetadata {
   return {
     services: [{ name: "mail", url: "http://localhost:4000", port: 4000, source: "resend" }],
+    env: {},
     dependencies: ["/tmp/emulate-watch/config.json"],
     directory: "/tmp/emulate-watch",
     watch: [],
