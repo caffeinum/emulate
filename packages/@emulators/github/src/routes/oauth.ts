@@ -27,7 +27,7 @@ type PendingCode = {
 
 const PENDING_CODE_TTL_MS = 10 * 60 * 1000;
 
-function getPendingCodes(store: Store): Map<string, PendingCode> {
+export function getPendingCodes(store: Store): Map<string, PendingCode> {
   let map = store.getData<Map<string, PendingCode>>("github.oauth.pendingCodes");
   if (!map) {
     map = new Map();
@@ -36,7 +36,7 @@ function getPendingCodes(store: Store): Map<string, PendingCode> {
   return map;
 }
 
-function getTokenToClientId(store: Store): Map<string, string> {
+export function getTokenToClientId(store: Store): Map<string, string> {
   let map = store.getData<Map<string, string>>("github.oauth.tokenToClientId");
   if (!map) {
     map = new Map();
@@ -45,7 +45,7 @@ function getTokenToClientId(store: Store): Map<string, string> {
   return map;
 }
 
-function getSessionMap(store: Store): Map<string, string> {
+export function getSessionMap(store: Store): Map<string, string> {
   let map = store.getData<Map<string, string>>("github.oauth.sessionMap");
   if (!map) {
     map = new Map();
@@ -67,6 +67,30 @@ function getPendingCodeIfValid(store: Store, code: string): PendingCode | undefi
 }
 
 const SERVICE_LABEL = "GitHub";
+
+const APP_USER_TOKEN_TTL_S = 8 * 60 * 60;
+const APP_REFRESH_TOKEN_TTL_S = 184 * 24 * 60 * 60;
+
+type AppRefreshToken = { login: string; clientId: string; expiresAt: number };
+
+function getAppRefreshTokens(store: Store): Map<string, AppRefreshToken> {
+  let map = store.getData<Map<string, AppRefreshToken>>("github.oauth.appRefreshTokens");
+  if (!map) {
+    map = new Map();
+    store.setData("github.oauth.appRefreshTokens", map);
+  }
+  return map;
+}
+
+/** Logins that have authorized each GitHub App, keyed by the app's client_id. */
+export function getAppAuthorizedLogins(store: Store): Map<string, Set<string>> {
+  let map = store.getData<Map<string, Set<string>>>("github.oauth.appAuthorizedLogins");
+  if (!map) {
+    map = new Map();
+    store.setData("github.oauth.appAuthorizedLogins", map);
+  }
+  return map;
+}
 
 const DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 const DEVICE_CODE_TTL_S = 900;
@@ -104,6 +128,50 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
     return null;
   }
 
+  function issueAppUserToken(c: Context<AppEnv>, clientId: string, user: { login: string; id: number }) {
+    const accessToken = "ghu_" + randomBytes(27).toString("base64url");
+    const refreshToken = "ghr_" + randomBytes(57).toString("base64url");
+    tokenMap?.set(accessToken, { login: user.login, id: user.id, scopes: [] });
+    getTokenToClientId(store).set(accessToken, clientId);
+    getAppRefreshTokens(store).set(refreshToken, {
+      login: user.login,
+      clientId,
+      expiresAt: Date.now() + APP_REFRESH_TOKEN_TTL_S * 1000,
+    });
+    const authorized = getAppAuthorizedLogins(store);
+    authorized.set(clientId, (authorized.get(clientId) ?? new Set()).add(user.login));
+    const result = {
+      access_token: accessToken,
+      expires_in: APP_USER_TOKEN_TTL_S,
+      refresh_token: refreshToken,
+      refresh_token_expires_in: APP_REFRESH_TOKEN_TTL_S,
+      token_type: "bearer",
+      scope: "",
+    };
+    if ((c.req.header("Accept") ?? "").includes("application/x-www-form-urlencoded")) {
+      c.header("Content-Type", "application/x-www-form-urlencoded");
+      return c.body(
+        new URLSearchParams(Object.fromEntries(Object.entries(result).map(([k, v]) => [k, String(v)]))).toString(),
+        200,
+      );
+    }
+    return c.json(result);
+  }
+
+  function refreshAppUserToken(c: Context<AppEnv>, clientId: string, refreshToken: string) {
+    const refreshTokens = getAppRefreshTokens(store);
+    const record = refreshTokens.get(refreshToken);
+    refreshTokens.delete(refreshToken);
+    const user = record ? gh.users.findOneBy("login", record.login) : undefined;
+    if (!record || record.clientId !== clientId || record.expiresAt <= Date.now() || !user) {
+      return c.json({
+        error: "bad_refresh_token",
+        error_description: "The refresh token passed is incorrect or expired.",
+      });
+    }
+    return issueAppUserToken(c, clientId, user);
+  }
+
   // ---------- OAuth authorize page ----------
 
   app.get("/login/oauth/authorize", (c) => {
@@ -112,9 +180,22 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
     const scope = c.req.query("scope") ?? "";
     const state = c.req.query("state") ?? "";
 
+    const githubApp = client_id ? gh.apps.findOneBy("client_id", client_id) : undefined;
     const oauthAppsConfigured = gh.oauthApps.all().length > 0;
     let oauthAppForSubtitle: { name: string } | undefined;
-    if (oauthAppsConfigured) {
+    if (githubApp) {
+      if (redirect_uri && githubApp.callback_url && !matchesRedirectUri(redirect_uri, [githubApp.callback_url])) {
+        return c.html(
+          renderErrorPage(
+            "Redirect URI mismatch",
+            "The redirect_uri is not the callback URL of this GitHub App.",
+            SERVICE_LABEL,
+          ),
+          400,
+        );
+      }
+      oauthAppForSubtitle = githubApp;
+    } else if (oauthAppsConfigured) {
       const oauthApp = gh.oauthApps.findOneBy("client_id", client_id);
       if (!oauthApp) {
         return c.html(
@@ -175,10 +256,13 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
   app.post("/login/oauth/callback", async (c) => {
     const body = (await c.req.parseBody()) as Record<string, string>;
     const login = String(body.login ?? "");
-    const redirect_uri = String(body.redirect_uri ?? "");
     const scope = String(body.scope ?? "");
     const state = String(body.state ?? "");
     const client_id = String(body.client_id ?? "");
+    const redirect_uri =
+      String(body.redirect_uri ?? "") ||
+      (client_id ? gh.apps.findOneBy("client_id", client_id)?.callback_url : "") ||
+      "";
 
     const code = randomBytes(20).toString("hex");
     getPendingCodes(store).set(code, {
@@ -340,8 +424,17 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
       );
     };
 
+    const githubApp = bodyClientId ? gh.apps.findOneBy("client_id", bodyClientId) : undefined;
     const oauthAppsConfigured = gh.oauthApps.all().length > 0;
-    if (oauthAppsConfigured) {
+    if (githubApp) {
+      if (!githubApp.client_secret || !constantTimeSecretEqual(actualSecret, githubApp.client_secret)) {
+        debug("github.oauth", `[OAuth token] REJECTED: GitHub App client_secret mismatch`);
+        return incorrectClientCredentials();
+      }
+      if (raw.grant_type === "refresh_token") {
+        return refreshAppUserToken(c, githubApp.client_id!, String(raw.refresh_token ?? ""));
+      }
+    } else if (oauthAppsConfigured) {
       const oauthApp = gh.oauthApps.findOneBy("client_id", bodyClientId);
       if (!oauthApp) {
         debug("github.oauth", `[OAuth token] REJECTED: client_id not found in oauthApps`);
@@ -392,6 +485,15 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
       );
     }
 
+    const codeForGitHubApp = pending.clientId ? Boolean(gh.apps.findOneBy("client_id", pending.clientId)) : false;
+    if ((githubApp || codeForGitHubApp) && pending.clientId !== githubApp?.client_id) {
+      debug("github.oauth", `[OAuth token] REJECTED: code was issued to another client`);
+      return c.json(
+        { error: "bad_verification_code", error_description: "The code passed is incorrect or expired." },
+        200,
+      );
+    }
+
     debug("github.oauth", `[OAuth token] code valid, login=${pending.login}, scope=${pending.scope}`);
     getPendingCodes(store).delete(code);
 
@@ -403,6 +505,8 @@ export function oauthRoutes({ app, store, baseUrl, tokenMap }: RouteContext): vo
         200,
       );
     }
+
+    if (githubApp) return issueAppUserToken(c, githubApp.client_id!, user);
 
     const token = "gho_" + randomBytes(20).toString("base64url");
     const scopes = pending.scope ? pending.scope.split(/[,\s]+/).filter(Boolean) : ["repo", "user"];
