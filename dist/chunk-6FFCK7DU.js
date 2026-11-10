@@ -12,7 +12,7 @@ import {
   publishGeneratedSecretsFile,
   registerAliases,
   removeAliases
-} from "./chunk-X37XRSOG.js";
+} from "./chunk-3E4EWOX3.js";
 
 // src/program.ts
 import { Command } from "commander";
@@ -780,7 +780,7 @@ Use the ${name} URL and Inspector link printed by start to send requests and ins
 function createProgram() {
   const defaultPort = process.env.EMULATE_PORT ?? process.env.PORT ?? "4000";
   const program = new Command();
-  program.name("emulate").description("Local drop-in replacement services for CI and no-network sandboxes").version("0.13.0").exitOverride().configureOutput({ outputError: () => {
+  program.name("emulate").description("Local drop-in replacement services for CI and no-network sandboxes").version("0.13.1").exitOverride().configureOutput({ outputError: () => {
   } }).addHelpText(
     "after",
     `
@@ -972,4 +972,4 @@ function parsePort(value) {
 export {
   createProgram
 };
-//# sourceMappingURL=chunk-N3BMOE7X.js.map
+//# sourceMappingURL=chunk-6FFCK7DU.js.map

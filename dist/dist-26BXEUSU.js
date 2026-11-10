@@ -467,15 +467,15 @@ var JWTManager = class {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/request/constants.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/request/constants.js
 var GET_MATCH_RESULT = /* @__PURE__ */ Symbol();
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/utils/buffer.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/utils/buffer.js
 var bufferToFormData = (arrayBuffer, contentType2) => {
   return new Response(arrayBuffer, { headers: { "Content-Type": contentType2.replace(/^[^;]+/, (mediaType) => mediaType.toLowerCase()) } }).formData();
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/utils/body.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/utils/body.js
 var MAX_NESTED_OBJECTS = 1e4;
 var isRawRequest = (request) => "headers" in request;
 var parseBody = async (request, options = /* @__PURE__ */ Object.create(null)) => {
@@ -539,7 +539,7 @@ var throwNestingLimitExceeded = () => {
   throw new Error("Nesting limit exceeded");
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/utils/url.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/utils/url.js
 var splitPath = (path) => {
   const paths = path.split("/");
   if (paths[0] === "") paths.shift();
@@ -632,6 +632,15 @@ var getPathNoStrict = (request) => {
   const result = getPath(request);
   return result.length > 1 && result.at(-1) === "/" ? result.slice(0, -1) : result;
 };
+var stripPathPrefix = (rawPath, decodedPath, prefixLength) => {
+  if (rawPath.at(-1) === "/" && decodedPath.at(-1) !== "/") rawPath = rawPath.slice(0, -1);
+  let index = 0;
+  for (let i = decodedPath.indexOf("/"); i !== -1 && i < prefixLength; i = decodedPath.indexOf("/", i + 1)) {
+    index = rawPath.indexOf("/", index + 1);
+    if (index === -1) return "/";
+  }
+  return rawPath.slice(index) || "/";
+};
 var mergePath = (base, sub, ...rest) => {
   if (rest.length) sub = mergePath(sub, ...rest);
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
@@ -664,17 +673,22 @@ var _getQueryParam = (url, key, multiple) => {
   const hashIndex = url.indexOf("#", 8);
   if (hashIndex !== -1) url = url.slice(0, hashIndex);
   let encoded;
-  if (!multiple && key && key.indexOf("%") === -1 && key.indexOf("+") === -1) {
-    let keyIndex2 = url.indexOf("?", 8);
+  if (!multiple && key && !/[%+&=]/.test(key)) {
+    const queryIndex = url.indexOf("?", 8);
+    let keyIndex2 = queryIndex;
     if (keyIndex2 === -1) return;
     if (!url.startsWith(key, keyIndex2 + 1)) keyIndex2 = url.indexOf(`&${key}`, keyIndex2 + 1);
     while (keyIndex2 !== -1) {
       const trailingKeyCode = url.charCodeAt(keyIndex2 + key.length + 1);
-      if (trailingKeyCode === 61) {
-        const valueIndex = keyIndex2 + key.length + 2;
-        const endIndex = url.indexOf("&", valueIndex);
-        return _decodeURI(url.slice(valueIndex, endIndex === -1 ? void 0 : endIndex));
-      } else if (trailingKeyCode == 38 || isNaN(trailingKeyCode)) return "";
+      if (trailingKeyCode === 61 || trailingKeyCode === 38 || isNaN(trailingKeyCode)) {
+        if (keyIndex2 > queryIndex && /(?:^|&)[^=&]*[%+]/.test(url.slice(queryIndex + 1, keyIndex2))) break;
+        if (trailingKeyCode === 61) {
+          const valueIndex = keyIndex2 + key.length + 2;
+          const endIndex = url.indexOf("&", valueIndex);
+          return _decodeURI(url.slice(valueIndex, endIndex === -1 ? void 0 : endIndex));
+        }
+        return "";
+      }
       keyIndex2 = url.indexOf(`&${key}`, keyIndex2 + 1);
     }
     encoded = /[%+]/.test(url);
@@ -710,7 +724,7 @@ var getQueryParams = (url, key) => {
 };
 var decodeURIComponent_ = decodeURIComponent;
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/request.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/request.js
 var HonoRequest = class {
   /**
   * `.raw` can get the raw Request object.
@@ -896,7 +910,7 @@ var HonoRequest = class {
     return this.#validatedData?.[target];
   }
   /**
-  * `.url()` can get the request url strings.
+  * `.url` can get the request url strings.
   *
   * @see {@link https://hono.dev/docs/api/request#url}
   *
@@ -912,7 +926,7 @@ var HonoRequest = class {
     return this.raw.url;
   }
   /**
-  * `.method()` can get the method name of the request.
+  * `.method` can get the method name of the request.
   *
   * @see {@link https://hono.dev/docs/api/request#method}
   *
@@ -930,7 +944,7 @@ var HonoRequest = class {
     return this.#matchResult;
   }
   /**
-  * `.matchedRoutes()` can return a matched route in the handler
+  * `.matchedRoutes` can return a matched route in the handler
   *
   * @deprecated
   *
@@ -960,7 +974,7 @@ var HonoRequest = class {
     return this.#matchResult[0].map(([[, route]]) => route);
   }
   /**
-  * `routePath()` can retrieve the path registered within the handler
+  * `.routePath` can retrieve the path registered within the handler
   *
   * @deprecated
   *
@@ -980,7 +994,7 @@ var HonoRequest = class {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/utils/html.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/utils/html.js
 var HtmlEscapedCallbackPhase = {
   Stringify: 1,
   BeforeStream: 2,
@@ -1010,7 +1024,7 @@ var resolveCallback = async (str, phase, preserveCallbacks, context, buffer) => 
   else return resStr;
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/context.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/context.js
 var TEXT_PLAIN = "text/plain; charset=UTF-8";
 var setDefaultContentType = (contentType2, headers) => {
   return {
@@ -1207,7 +1221,7 @@ var Context = class {
   * ```
   */
   header = (name, value, options) => {
-    if (this.finalized) this.#res = createResponseInstance(this.#res.body, this.#res);
+    if (this.finalized && !this.#res.bodyUsed) this.#res = createResponseInstance(this.#res.body, this.#res);
     const headers = this.#res ? this.#res.headers : this.#preparedHeaders ??= new Headers();
     if (value === void 0) headers.delete(name);
     else if (options?.append) headers.append(name, value);
@@ -1388,7 +1402,7 @@ var Context = class {
   };
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/compose.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/compose.js
 var compose = (middleware, onError, onNotFound) => {
   return (context, next) => {
     let index = -1;
@@ -1419,7 +1433,7 @@ var compose = (middleware, onError, onNotFound) => {
   };
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router.js
 var METHODS = [
   "get",
   "post",
@@ -1433,10 +1447,41 @@ var MESSAGE_MATCHER_IS_ALREADY_BUILT = "Can not add a route since the matcher is
 var UnsupportedPathError = class extends Error {
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/utils/constants.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/utils/constants.js
 var COMPOSED_HANDLER = "__COMPOSED_HANDLER";
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/hono-base.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/utils/mount.js
+var getPathPrefixLength = (c, pathPrefix, routePath) => {
+  if (!/[:*]/.test(pathPrefix)) return pathPrefix.length;
+  const path = c.req.path;
+  const matchResult = c.req[GET_MATCH_RESULT];
+  const paramNames = /* @__PURE__ */ new Set();
+  let length = 0;
+  for (const part of splitRoutingPath(pathPrefix)) {
+    const pattern = getPattern(part);
+    if (pattern && pattern !== "*") {
+      const name = pattern[1];
+      if (paramNames.has(name)) throw new Error(`mount(): Duplicate path parameter "${name}" in "${routePath}".`);
+      paramNames.add(name);
+    }
+    if (pattern && pattern !== "*" && pattern[2] !== true) {
+      const value = matchResult.length === 2 ? matchResult[1][matchResult[0][c.req.routeIndex][1][pattern[1]]] : matchResult[0][c.req.routeIndex][1][pattern[1]];
+      length += value.length + 1;
+    } else if (pattern || part.endsWith("*")) {
+      const end = path.indexOf("/", length + 1);
+      length = end === -1 ? path.length : end;
+    } else length += part.length + 1;
+  }
+  return length;
+};
+var createMountedRequest = (c, pathPrefix, routePath) => {
+  if (/[^/]\*$/.test(routePath)) throw new Error(`mount(): Wildcard must follow "/" in "${routePath}".`);
+  const url = new URL(c.req.raw.url);
+  url.pathname = stripPathPrefix(url.pathname, c.req.path, getPathPrefixLength(c, pathPrefix, routePath));
+  return new Request(url, c.req.raw);
+};
+
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/hono-base.js
 var notFoundHandler = (c) => {
   return c.text("404 Not Found", 404);
 };
@@ -1604,6 +1649,8 @@ var Hono = class Hono2 {
   /**
   * `.mount()` allows you to mount applications built with other frameworks into your Hono application.
   *
+  * @deprecated Use `mount()` from `hono/mount` instead. `.mount()` will be removed in v5.
+  *
   * @see {@link https://hono.dev/docs/api/hono#mount}
   *
   * @param {string} path - base Path
@@ -1655,17 +1702,10 @@ var Hono = class Hono2 {
       }
       return [c.env, executionContext];
     };
-    replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path);
-      const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
-      return (request) => {
-        const url = new URL(request.url);
-        url.pathname = this.getPath(request).slice(pathPrefixLength) || "/";
-        return new Request(url, request);
-      };
-    })();
+    const mergedPath = mergePath(this._basePath, path);
+    const defaultReplaceRequest = (c) => createMountedRequest(c, mergedPath.replace(/\/$/, ""), mergePath(mergedPath, "*"));
     const handler = async (c, next) => {
-      const res = await applicationHandler(replaceRequest(c.req.raw), ...getOptions(c));
+      const res = await applicationHandler(replaceRequest ? replaceRequest(c.req.raw) : defaultReplaceRequest(c), ...getOptions(c));
       if (res) return res;
       await next();
     };
@@ -1775,10 +1815,10 @@ var Hono = class Hono2 {
   };
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/utils.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/utils.js
 var createNullObject = () => /* @__PURE__ */ Object.create(null);
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/reg-exp-router/matcher.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
 function match(method, path) {
   const matchers = this.buildAllMatchers();
@@ -1795,16 +1835,17 @@ function match(method, path) {
   return match2(method, path);
 }
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/reg-exp-router/node.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/reg-exp-router/node.js
 var LABEL_REG_EXP_STR = "[^/]+";
-var TAIL_WILDCARD_REG_EXP_STR = "(?:|/.*)";
+var ONLY_WILDCARD_REG_EXP_STR = "[^]*";
+var TAIL_WILDCARD_REG_EXP_STR = "(?:|/[^]*)";
 var PATH_ERROR = /* @__PURE__ */ Symbol();
 var regExpMetaChars = /* @__PURE__ */ new Set(".\\+*[^]$()");
 function compareKey(a, b) {
   if (a.length === 1) return b.length === 1 ? a < b ? -1 : 1 : -1;
   if (b.length === 1) return 1;
-  if (a === ".*" || a === "(?:|/.*)") return b === "(?:|/.*)" ? -1 : 1;
-  else if (b === ".*" || b === "(?:|/.*)") return -1;
+  if (a === "[^]*" || a === "(?:|/[^]*)") return b === "[^]*" ? -1 : 1;
+  else if (b === "[^]*" || b === "(?:|/[^]*)") return -1;
   if (a === "[^/]+") return 1;
   else if (b === "[^/]+") return -1;
   return a.length === b.length ? a < b ? -1 : 1 : b.length - a.length;
@@ -1813,14 +1854,14 @@ var Node = class Node2 {
   #index;
   #varIndex;
   #children = createNullObject();
-  insert(tokens, index, paramMap, context, isStatic) {
+  insert(tokens, index, paramMap, context, keys) {
     let node = this;
     for (let i = 0, len = tokens.length; i < len; i++) {
       const token = tokens[i];
       const pattern = token.length === 1 ? token === "*" ? i === len - 1 ? [
         "",
         "",
-        ".*"
+        ONLY_WILDCARD_REG_EXP_STR
       ] : [
         "",
         "",
@@ -1835,15 +1876,16 @@ var Node = class Node2 {
         const name = pattern[1];
         let regexpStr = pattern[2] || "[^/]+";
         if (name && pattern[2]) {
-          if (regexpStr === ".*") throw PATH_ERROR;
+          if (new RegExp(regexpStr).test("")) throw PATH_ERROR;
           regexpStr = regexpStr.replace(/^\((?!\?:)(?=[^)]+\)$)/, "(?:");
           if (/\((?!\?:)/.test(regexpStr)) throw PATH_ERROR;
           if (regexpStr.length === 1 && regExpMetaChars.has(regexpStr)) throw PATH_ERROR;
         }
+        keys.push(regexpStr);
         nextNode = node.#children[regexpStr];
         if (!nextNode) {
-          if (regexpStr !== ".*" && regexpStr !== "(?:|/.*)") {
-            for (const k in node.#children) if ((regexpStr.length > 1 || k.length > 1) && k !== ".*" && k !== "(?:|/.*)") throw PATH_ERROR;
+          if (regexpStr !== "[^]*" && regexpStr !== "(?:|/[^]*)") {
+            for (const k in node.#children) if ((regexpStr.length > 1 || k.length > 1) && k !== "[^]*" && k !== "(?:|/[^]*)") throw PATH_ERROR;
           }
           nextNode = node.#children[regexpStr] = new Node2();
         }
@@ -1852,16 +1894,17 @@ var Node = class Node2 {
           paramMap.push([name, nextNode.#varIndex]);
         }
       } else {
+        keys.push(token);
         nextNode = node.#children[token];
         if (!nextNode) {
-          for (const k in node.#children) if (k.length > 1 && k !== ".*" && k !== "(?:|/.*)") throw PATH_ERROR;
+          for (const k in node.#children) if (k.length > 1 && k !== "[^]*" && k !== "(?:|/[^]*)") throw PATH_ERROR;
           nextNode = node.#children[token] = new Node2();
         }
       }
       node = nextNode;
     }
     if (node.#index !== void 0) throw PATH_ERROR;
-    node.#index = isStatic ? -1 : index;
+    node.#index = index;
   }
   buildRegExpStr() {
     const strList = Object.keys(this.#children).sort(compareKey).map((k) => {
@@ -1876,15 +1919,21 @@ var Node = class Node2 {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/reg-exp-router/trie.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/reg-exp-router/trie.js
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
   #index = 0;
   paths = createNullObject();
   insert(path, isStatic) {
+    const keys = [];
     if (isStatic) {
-      this.#root.insert(path.split(""), 0, [], this.#context, true);
+      this.#root.insert(path.split(""), -1, [], this.#context, keys);
+      this.paths[path] = [
+        -1,
+        [],
+        keys
+      ];
       return;
     }
     const paramAssoc = [];
@@ -1892,7 +1941,7 @@ var Trie = class {
     let markedPath = path;
     for (let i = 0; ; ) {
       let replaced = false;
-      markedPath = markedPath.replace(/\{[^}]+\}/g, (m) => {
+      markedPath = markedPath.replace(/\{(?:\{[\d,]+\}|[^}])+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -1901,7 +1950,7 @@ var Trie = class {
       });
       if (!replaced) break;
     }
-    const tokens = markedPath.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = markedPath.match(/(?::[^\/]+)|(?:\/\*$)|./gs) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) if (tokens[j].indexOf(mark) !== -1) {
@@ -1909,8 +1958,12 @@ var Trie = class {
         break;
       }
     }
-    this.#root.insert(tokens, this.#index, paramAssoc, this.#context, false);
-    this.paths[path] = [this.#index++, paramAssoc];
+    this.#root.insert(tokens, this.#index, paramAssoc, this.#context, keys);
+    this.paths[path] = [
+      this.#index++,
+      paramAssoc,
+      keys
+    ];
   }
   buildRegExp() {
     let regexp = this.#root.buildRegExpStr();
@@ -1941,22 +1994,22 @@ var Trie = class {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/reg-exp-router/router.js
-var wildcardRegExpCache = createNullObject();
-function buildWildcardRegExp(path) {
-  return wildcardRegExpCache[path] ??= new RegExp(`^${path.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (match2, metaChar) => metaChar ? `\\${metaChar}` : match2 === "/*" ? TAIL_WILDCARD_REG_EXP_STR : match2 === "*" ? ".*" : `/:${LABEL_REG_EXP_STR}`)}$`);
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/reg-exp-router/router.js
+function endsWithWildcard(keys) {
+  const tail = keys[keys.length - 1];
+  return tail === "[^]*" || tail === "(?:|/[^]*)";
 }
-function findMiddleware(middleware, path) {
-  for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) if (buildWildcardRegExp(k).test(path)) return [...middleware[k]];
+function covers(wildcard, target) {
+  const last = wildcard.length - 1;
+  for (let i = 0; i < last; i++) if (wildcard[i] !== target[i]) return false;
+  return wildcard[last] === "[^]*" || target.length === last || target[last] === "/";
 }
 var RegExpRouter = class {
   name = "RegExpRouter";
-  #middleware;
-  #routes;
+  #handlers;
   #tries;
   constructor() {
-    this.#middleware = { ["ALL"]: createNullObject() };
-    this.#routes = { ["ALL"]: createNullObject() };
+    this.#handlers = { ["ALL"]: [] };
     this.#tries = { ["ALL"]: new Trie() };
   }
   #insertPath(method, path) {
@@ -1967,65 +2020,53 @@ var RegExpRouter = class {
     }
   }
   add(method, path, handler) {
-    const middleware = this.#middleware;
-    const routes = this.#routes;
-    if (!middleware) throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
-    if (!middleware[method]) {
-      this.#tries[method] = new Trie();
-      for (const handlerMap of [middleware, routes]) {
-        handlerMap[method] = createNullObject();
-        for (const p in handlerMap["ALL"]) {
-          handlerMap[method][p] = [...handlerMap["ALL"][p]];
-          this.#insertPath(method, p);
-        }
-      }
+    const handlers = this.#handlers;
+    if (!handlers) throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
+    const tries = this.#tries;
+    if (!handlers[method]) {
+      tries[method] = new Trie();
+      handlers[method] = [...handlers["ALL"]];
+      for (const p in tries["ALL"].paths) this.#insertPath(method, p);
     }
     if (path === "/*") path = "*";
-    const methods = method === "ALL" ? Object.keys(middleware) : [method];
-    if (/\*$/.test(path)) {
-      const re = buildWildcardRegExp(path);
-      for (const m of methods) if (!middleware[m][path]) {
-        this.#insertPath(m, path);
-        middleware[m][path] = findMiddleware(middleware[m], path) || findMiddleware(middleware["ALL"], path) || [];
-      }
-      for (const handlerMap of [middleware, routes]) for (const m of methods) for (const p in handlerMap[m]) re.test(p) && handlerMap[m][p].push([handler, path]);
-      return;
-    }
+    const methods = method === "ALL" ? Object.keys(handlers) : [method];
     const paths = checkOptionalParameter(path) || [path];
     for (const path2 of paths) for (const m of methods) {
-      if (!routes[m][path2]) {
-        this.#insertPath(m, path2);
-        routes[m][path2] = findMiddleware(middleware[m], path2) || findMiddleware(middleware["ALL"], path2) || [];
-      }
-      routes[m][path2].push([handler, path2]);
+      if (!tries[m].paths[path2]) this.#insertPath(m, path2);
+      handlers[m].push([handler, path2]);
     }
   }
   match = match;
   buildAllMatchers() {
     const matchers = createNullObject();
-    for (const method of Object.keys(this.#routes)) matchers[method] = this.#buildMatcher(method);
-    this.#middleware = this.#routes = this.#tries = void 0;
-    wildcardRegExpCache = createNullObject();
+    for (const method of Object.keys(this.#handlers)) matchers[method] = this.#buildMatcher(method);
+    this.#handlers = this.#tries = void 0;
     return matchers;
   }
   #buildMatcher(method) {
-    const middleware = this.#middleware[method];
-    const routes = this.#routes[method];
+    const handlers = this.#handlers[method];
     const trie = this.#tries[method];
     const staticMap = createNullObject();
     const handlerData = [];
     const [regexp, indexReplacementMap, paramReplacementMap] = trie.buildRegExp();
-    for (const r of [middleware, routes]) for (const path in r) {
-      const handlers = r[path];
-      const pathData = trie.paths[path];
-      if (!pathData) {
-        staticMap[path] = [handlers.map(([h]) => [h, createNullObject()]), emptyParam];
-        continue;
-      }
-      handlerData[pathData[0]] = handlers.map(([h, handlerPath]) => [h, trie.paths[handlerPath][1].reduceRight((map, [key], i) => {
-        map[key] = paramReplacementMap[pathData[1][i][1]];
+    const own = createNullObject();
+    const entries = handlers.map(([h, p], i) => {
+      (own[p] ??= []).push(i);
+      return [h, trie.paths[p][1].reduceRight((map, [key, varIndex]) => {
+        map[key] = paramReplacementMap[varIndex];
         return map;
-      }, createNullObject())]);
+      }, createNullObject())];
+    });
+    const wildcards = Object.keys(own).filter((p) => endsWithWildcard(trie.paths[p][2]));
+    for (const path in trie.paths) {
+      const [index, , keys] = trie.paths[path];
+      const indexes = [...own[path]];
+      for (const p of wildcards) if (p !== path && covers(trie.paths[p][2], keys)) indexes.push(...own[p]);
+      const data = indexes.sort((a, b) => a - b).map((i) => entries[i]);
+      if (index === -1) {
+        const last = Math.max(-1, ...data.flatMap(([, map]) => Object.values(map)));
+        staticMap[path] = [data, last === -1 ? emptyParam : path.match(regexp).slice(0, last + 1)];
+      } else handlerData[index] = data;
     }
     return [
       regexp,
@@ -2035,7 +2076,7 @@ var RegExpRouter = class {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/smart-router/router.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/smart-router/router.js
 var SmartRouter = class {
   name = "SmartRouter";
   #routers = [];
@@ -2082,7 +2123,7 @@ var SmartRouter = class {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/trie-router/node.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/trie-router/node.js
 var emptyParams = createNullObject();
 var order = 0;
 var Node3 = class Node4 {
@@ -2178,7 +2219,7 @@ var Node3 = class Node4 {
             const restPathString = path.slice(partOffsets[i]);
             const m = matcher.exec(restPathString);
             if (m) {
-              params[name] = m[0];
+              if (!Object.hasOwn(params, name)) params[name] = m[0];
               this.#pushHandlerSets(handlerSets, child, method, node.#params, params);
               if (m[0].length === restPathString.length && child.#children["*"]) this.#pushHandlerSets(handlerSets, child.#children["*"], method, node.#params, params);
               for (const _ in child.#children) {
@@ -2191,7 +2232,7 @@ var Node3 = class Node4 {
             }
           }
           if (matcher === true || matcher.test(part)) {
-            params[name] = part;
+            if (!Object.hasOwn(params, name)) params[name] = part;
             if (isLast) {
               this.#pushHandlerSets(handlerSets, child, method, params, node.#params);
               if (child.#children["*"]) this.#pushHandlerSets(handlerSets, child.#children["*"], method, params, node.#params);
@@ -2212,7 +2253,7 @@ var Node3 = class Node4 {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/router/trie-router/router.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/router/trie-router/router.js
 var TrieRouter = class {
   name = "TrieRouter";
   #node = new Node3();
@@ -2224,7 +2265,7 @@ var TrieRouter = class {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/hono.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/hono.js
 var Hono3 = class extends Hono {
   /**
   * Creates an instance of the Hono class.
@@ -2237,7 +2278,7 @@ var Hono3 = class extends Hono {
   }
 };
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/middleware/cors/index.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/middleware/cors/index.js
 var cors = (options) => {
   const opts = {
     origin: "*",
@@ -11735,15 +11776,15 @@ var workosPlugin = {
   }
 };
 
-// ../../node_modules/.pnpm/@hono+node-server@2.1.3_hono@4.13.12/node_modules/@hono/node-server/dist/constants-BLSFu_RU.mjs
+// ../../node_modules/.pnpm/@hono+node-server@2.1.6_hono@4.13.17/node_modules/@hono/node-server/dist/constants-BLSFu_RU.mjs
 var X_ALREADY_SENT = "x-hono-already-sent";
 
-// ../../node_modules/.pnpm/@hono+node-server@2.1.3_hono@4.13.12/node_modules/@hono/node-server/dist/index.mjs
+// ../../node_modules/.pnpm/@hono+node-server@2.1.6_hono@4.13.17/node_modules/@hono/node-server/dist/index.mjs
 import { STATUS_CODES, ServerResponse, createServer as createServer2 } from "http";
 import { Http2ServerRequest, constants } from "http2";
 import { Readable } from "stream";
 
-// ../../node_modules/.pnpm/hono@4.13.12/node_modules/hono/dist/helper/websocket/index.js
+// ../../node_modules/.pnpm/hono@4.13.17/node_modules/hono/dist/helper/websocket/index.js
 var defineWebSocketHelper = (handler) => {
   return ((...args) => {
     if (typeof args[0] === "function") {
@@ -11764,7 +11805,7 @@ var defineWebSocketHelper = (handler) => {
   });
 };
 
-// ../../node_modules/.pnpm/@hono+node-server@2.1.3_hono@4.13.12/node_modules/@hono/node-server/dist/index.mjs
+// ../../node_modules/.pnpm/@hono+node-server@2.1.6_hono@4.13.17/node_modules/@hono/node-server/dist/index.mjs
 var RequestError = class extends Error {
   constructor(message, options) {
     super(message, options);
@@ -11922,16 +11963,27 @@ var newHeadersFromIncoming = (incoming) => globalThis.Headers === GlobalHeaders 
 var reValidRequestUrl = /^\/[!#$&-;=?-\[\]_a-z~]*$/;
 var reDotSegment = /\/\.\.?(?:[/?#]|$)/;
 var reValidHost = /^[a-z0-9._-]+(?::(?:[1-5]\d{3,4}|[6-9]\d{3}))?$/;
+var validateRequestTarget = (target) => {
+  const backslash = target.indexOf("\\");
+  if (backslash !== -1) {
+    const query = target.indexOf("?");
+    if (query === -1 || backslash < query) throw new RequestError("Backslash in request path");
+  }
+};
 var buildUrl = (scheme, host, incomingUrl) => {
   const url = `${scheme}://${host}${incomingUrl}`;
   if (!reValidHost.test(host)) {
+    validateRequestTarget(incomingUrl);
     const urlObj = new URL(url);
     if (urlObj.hostname.length !== host.length && urlObj.hostname !== (host.includes(":") ? host.replace(/:\d+$/, "") : host).toLowerCase()) throw new RequestError("Invalid host header");
     return urlObj.href;
   } else if (incomingUrl.length === 0) return url + "/";
   else {
     if (incomingUrl.charCodeAt(0) !== 47) throw new RequestError("Invalid URL");
-    if (!reValidRequestUrl.test(incomingUrl) || reDotSegment.test(incomingUrl)) return new URL(url).href;
+    if (!reValidRequestUrl.test(incomingUrl) || reDotSegment.test(incomingUrl)) {
+      validateRequestTarget(incomingUrl);
+      return new URL(url).href;
+    }
     return url;
   }
 };
@@ -12344,6 +12396,7 @@ var newRequest = (incoming, defaultHostname) => {
   if (incomingUrl[0] !== "/" && (incomingUrl.startsWith("http://") || incomingUrl.startsWith("https://"))) {
     if (incoming instanceof Http2ServerRequest) throw new RequestError("Absolute URL for :path is not allowed in HTTP/2");
     try {
+      validateRequestTarget(incomingUrl);
       req[urlKey] = new URL(incomingUrl).href;
     } catch (e) {
       throw new RequestError("Invalid absolute URL", { cause: e });
@@ -12592,7 +12645,7 @@ var makeCloseHandler = (req, incoming, outgoing, needsBodyCleanup) => () => {
   if (incoming.errored) {
     recordBodyBufferedBeforeDisconnect(incoming);
     req[abortRequest](incoming.errored.toString());
-  } else if (!outgoing.writableFinished) {
+  } else if (!outgoing.writableFinished || incoming instanceof Http2ServerRequest && incoming.aborted) {
     recordBodyBufferedBeforeDisconnect(incoming);
     req[abortRequest]("Client connection prematurely closed.");
   }
@@ -12880,6 +12933,7 @@ var appendResponseHeaders = (headers, responseHeaders) => {
   });
 };
 var rejectUpgradeRequest = (socket, status, responseHeaders) => {
+  if (socket.destroyed) return;
   const responseLines = ["Connection: close", "Content-Length: 0"];
   appendResponseHeaders(responseLines, responseHeaders);
   socket.end(`HTTP/1.1 ${status.toString()} ${STATUS_CODES[status] ?? ""}\r
@@ -12889,7 +12943,12 @@ ${responseLines.join("\r\n")}\r
 };
 var createUpgradeRequest = (request) => {
   const protocol = request.socket.encrypted ? "https" : "http";
-  const url = new URL(request.url ?? "/", `${protocol}://${request.headers.host ?? "localhost"}`);
+  const incomingUrl = request.url ?? "/";
+  let url;
+  if (incomingUrl[0] !== "/" && (incomingUrl.startsWith("http://") || incomingUrl.startsWith("https://"))) {
+    validateRequestTarget(incomingUrl);
+    url = new URL(incomingUrl).href;
+  } else url = buildUrl(protocol, request.headers.host ?? "localhost", incomingUrl);
   const headers = new Headers();
   for (const key in request.headers) {
     const value = request.headers[key];
@@ -12926,6 +12985,11 @@ var setupWebSocket = (options) => {
   };
   server.on("upgrade", async (request, socket, head) => {
     if (request.headers.upgrade?.toLowerCase() !== "websocket") return;
+    const ignoreSocketError = () => {
+    };
+    const reclaimWaiterOnClose = () => rejectWaiter(request);
+    socket.on("error", ignoreSocketError);
+    socket.once("close", reclaimWaiterOnClose);
     const env = {
       incoming: request,
       outgoing: void 0,
@@ -12940,8 +13004,12 @@ var setupWebSocket = (options) => {
         status = response.status;
         responseHeaders = response.headers;
       }
-    } catch {
-      if (server.listenerCount("upgrade") === 1) rejectUpgradeRequest(socket, 500);
+    } catch (error2) {
+      if (server.listenerCount("upgrade") === 1) rejectUpgradeRequest(socket, error2 instanceof RequestError ? 400 : 500);
+      return;
+    }
+    if (socket.destroyed) {
+      rejectWaiter(request);
       return;
     }
     const waiter = waiterMap.get(request);
@@ -12953,12 +13021,11 @@ var setupWebSocket = (options) => {
     const addResponseHeaders = (headers) => {
       appendResponseHeaders(headers, responseHeaders);
     };
-    const reclaimWaiterOnClose = () => rejectWaiter(request);
-    socket.once("close", reclaimWaiterOnClose);
     wss.on("headers", addResponseHeaders);
     try {
       wss.handleUpgrade(request, socket, head, (ws) => {
         socket.off("close", reclaimWaiterOnClose);
+        socket.off("error", ignoreSocketError);
         wss.emit("connection", ws, request);
       });
     } finally {
@@ -13259,4 +13326,4 @@ export {
   seedFromConfig2 as seedFromConfig,
   workosPlugin2 as workosPlugin
 };
-//# sourceMappingURL=dist-4DSJ5MQD.js.map
+//# sourceMappingURL=dist-26BXEUSU.js.map

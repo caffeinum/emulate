@@ -1,7 +1,7 @@
 import {
   createProgram
-} from "./chunk-N3BMOE7X.js";
-import "./chunk-X37XRSOG.js";
+} from "./chunk-6FFCK7DU.js";
+import "./chunk-3E4EWOX3.js";
 import "./chunk-U6ISZSHV.js";
 import "./chunk-PZ5AY32C.js";
 
@@ -306,7 +306,7 @@ async function startMcpServer() {
               result: {
                 protocolVersion: versions.includes(params.protocolVersion) ? params.protocolVersion : versions[0],
                 capabilities: { tools: {} },
-                serverInfo: { name: "emulate", version: true ? "0.13.0" : "0.0.0" },
+                serverInfo: { name: "emulate", version: true ? "0.13.1" : "0.0.0" },
                 instructions: "Tools run the emulate CLI. Start owns one emulator process until stop or this MCP connection closes."
               }
             });
@@ -369,4 +369,4 @@ async function startMcpServer() {
 export {
   startMcpServer
 };
-//# sourceMappingURL=mcp-MOCYADMC.js.map
+//# sourceMappingURL=mcp-RZ64HPCM.js.map

@@ -2870,7 +2870,7 @@ var SERVICE_REGISTRY = {
     label: "WorkOS API emulator (via @workos/emulate)",
     endpoints: "AuthKit authorize/authenticate, user management, organizations, sessions, JWKS, SSO, API keys",
     async load() {
-      const mod = await import("./dist-4DSJ5MQD.js");
+      const mod = await import("./dist-26BXEUSU.js");
       return { plugin: mod.workosPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -3754,4 +3754,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=chunk-X37XRSOG.js.map
+//# sourceMappingURL=chunk-3E4EWOX3.js.map
