@@ -57,29 +57,29 @@ npx emulate start --watch
 The scaffold implements reservations, stock changes, cancellation, and out-of-stock errors. It creates a runnable Node test and adds the service to a discovered YAML, JSON, TypeScript, or JavaScript config. For an unusual executable config, it prints the import and service entry to add manually. `init` prints the test command and directs you to the service URL and Inspector link printed by `start`; the port depends on the config. Watch mode retries when a missing local import is created, including outside the config directory. Use the inspector to view requests and state or reset to the initial seed. Structured inspection redacts token and secret fields such as `access_token`, `refresh_token`, and `client_secret`.
 
 ```typescript
-import { defineEmulator, createEmulator } from 'emulate'
+import { defineEmulator, createEmulator } from "emulate";
 
 const acme = defineEmulator({
-  name: 'acme',
+  name: "acme",
   state: () => ({ anvils: 100 }),
   setup({ app, state }) {
-    app.get('/inventory', (c) => c.json(state))
-    app.post('/orders', (c) => {
-      if (!state.anvils) return c.json({ error: 'sold_out' }, 409)
-      state.anvils -= 1
-      return c.json({ shipped: 'anvil', to: 'coyote' }, 201)
-    })
+    app.get("/inventory", (c) => c.json(state));
+    app.post("/orders", (c) => {
+      if (!state.anvils) return c.json({ error: "sold_out" }, 409);
+      state.anvils -= 1;
+      return c.json({ shipped: "anvil", to: "coyote" }, 201);
+    });
   },
-})
+});
 
-const api = await createEmulator({ service: acme, listen: false })
+const api = await createEmulator({ service: acme, listen: false });
 try {
-  await api.request('/orders', { method: 'POST' })
-  const checkpoint = api.snapshot()
-  await api.reset()
-  await api.restore(checkpoint)
+  await api.request("/orders", { method: "POST" });
+  const checkpoint = api.snapshot();
+  await api.reset();
+  await api.restore(checkpoint);
 } finally {
-  await api.close()
+  await api.close();
 }
 ```
 
@@ -124,15 +124,15 @@ npx emulate list
 
 ### Options
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `-p, --port` | `4000` | Base port (auto-increments per service) |
-| `--host` | `127.0.0.1` | Listening address; use `0.0.0.0` to allow network access |
-| `-s, --service` | all | Comma-separated services to enable |
-| `--seed` | auto-detect | Path to seed config (YAML or JSON) |
-| `--base-url` | none | Override advertised base URL (supports `{service}` template) |
-| `--portless` | off | Serve over HTTPS via portless (auto-registers aliases) |
-| `--generated-secrets-file` | none | Generate omitted service secrets and write them to a new owner-only JSON file |
+| Flag                       | Default     | Description                                                                   |
+| -------------------------- | ----------- | ----------------------------------------------------------------------------- |
+| `-p, --port`               | `4000`      | Base port (auto-increments per service)                                       |
+| `--host`                   | `127.0.0.1` | Listening address; use `0.0.0.0` to allow network access                      |
+| `-s, --service`            | all         | Comma-separated services to enable                                            |
+| `--seed`                   | auto-detect | Path to seed config (YAML or JSON)                                            |
+| `--base-url`               | none        | Override advertised base URL (supports `{service}` template)                  |
+| `--portless`               | off         | Serve over HTTPS via portless (auto-registers aliases)                        |
+| `--generated-secrets-file` | none        | Generate omitted service secrets and write them to a new owner-only JSON file |
 
 The port can also be set via `EMULATE_PORT` or `PORT` environment variables.
 
@@ -154,12 +154,12 @@ github:
 slack:
   signing_secret: local-signing-secret
 env:
-  GITHUB_API_URL: "{github.url}"                # also {github.port}, {github.host}
+  GITHUB_API_URL: "{github.url}" # also {github.port}, {github.host}
   SLACK_SIGNING_SECRET: "{slack.signing_secret}" # any seed value, [n] for list items
-  OPENAI_API_KEY: "${OPENAI_API_KEY}"            # from your shell; ${NAME:-default} and $$ also work
+  OPENAI_API_KEY: "${OPENAI_API_KEY}" # from your shell; ${NAME:-default} and $$ also work
   DATABASE_URL: postgres://localhost:5432/app_dev
-prepare: docker compose up -d --wait && bun run scripts/seed.ts   # after the emulators start, before the command, same env
-cleanup: docker compose down                                       # after the command exits, even on failure
+prepare: docker compose up -d --wait && bun run scripts/seed.ts # after the emulators start, before the command, same env
+cleanup: docker compose down # after the command exits, even on failure
 ```
 
 ```bash
@@ -229,39 +229,41 @@ npm install emulate
 Each call to `createEmulator` starts a single service:
 
 ```typescript
-import { createEmulator } from 'emulate'
+import { createEmulator } from "emulate";
 
-const github = await createEmulator({ service: 'github', port: 4001 })
-const vercel = await createEmulator({ service: 'vercel', port: 4002 })
+const github = await createEmulator({ service: "github", port: 4001 });
+const vercel = await createEmulator({ service: "vercel", port: 4002 });
 
-github.url   // 'http://localhost:4001'
-vercel.url   // 'http://localhost:4002'
+github.url; // 'http://localhost:4001'
+vercel.url; // 'http://localhost:4002'
 
-await github.close()
-await vercel.close()
+await github.close();
+await vercel.close();
 ```
 
 When a GitHub App omits `private_key`, `createEmulator` generates an RSA-2048 PKCS#1 key for that emulator instance:
 
 ```typescript
 const github = await createEmulator({
-  service: 'github',
+  service: "github",
   seed: {
     github: {
-      users: [{ login: 'octocat' }],
-      apps: [{
-        app_id: 12345,
-        slug: 'my-github-app',
-        name: 'My GitHub App',
-        installations: [{ installation_id: 100, account: 'octocat' }],
-      }],
+      users: [{ login: "octocat" }],
+      apps: [
+        {
+          app_id: 12345,
+          slug: "my-github-app",
+          name: "My GitHub App",
+          installations: [{ installation_id: 100, account: "octocat" }],
+        },
+      ],
     },
   },
-})
+});
 
 const privateKey = github.generatedSecrets.find(
-  secret => secret.kind === 'github.app_private_key' && secret.id === '12345',
-)?.value
+  (secret) => secret.kind === "github.app_private_key" && secret.id === "12345",
+)?.value;
 ```
 
 Generated keys remain stable across `reset()` calls and appear only in `generatedSecrets`. Explicitly configured keys are never returned there. A new `createEmulator` call generates a new key.
@@ -279,44 +281,47 @@ The destination must not exist. emulate removes inherited ACLs, verifies effecti
 
 ```typescript
 // vitest.setup.ts
-import { createEmulator, type Emulator } from 'emulate'
+import { createEmulator, type Emulator } from "emulate";
 
-let github: Emulator
-let vercel: Emulator
+let github: Emulator;
+let vercel: Emulator;
 
 beforeAll(async () => {
-  ;[github, vercel] = await Promise.all([
-    createEmulator({ service: 'github', port: 4001 }),
-    createEmulator({ service: 'vercel', port: 4002 }),
-  ])
-  process.env.GITHUB_EMULATOR_URL = github.url
-  process.env.VERCEL_EMULATOR_URL = vercel.url
-})
+  [github, vercel] = await Promise.all([
+    createEmulator({ service: "github", port: 4001 }),
+    createEmulator({ service: "vercel", port: 4002 }),
+  ]);
+  process.env.GITHUB_EMULATOR_URL = github.url;
+  process.env.VERCEL_EMULATOR_URL = vercel.url;
+});
 
-afterEach(() => { github.reset(); vercel.reset() })
-afterAll(() => Promise.all([github.close(), vercel.close()]))
+afterEach(() => {
+  github.reset();
+  vercel.reset();
+});
+afterAll(() => Promise.all([github.close(), vercel.close()]));
 ```
 
 ### Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `service` | *(required)* | Service name: `'vercel'`, `'github'`, `'google'`, `'slack'`, `'apple'`, `'microsoft'`, `'okta'`, `'aws'`, `'resend'`, `'stripe'`, `'mongoatlas'`, `'clerk'`, `'linear'`, or `'twilio'` |
-| `port` | `4000` | Port for the HTTP server |
-| `hostname` | `127.0.0.1` | Listening address for built-in and custom emulators |
-| `seed` | none | Inline seed data (same shape as YAML config) |
-| `baseUrl` | none | Override advertised base URL. Per-service `baseUrl` in seed config takes highest priority, then this option, then `EMULATE_BASE_URL` env var (supports `{service}`), then `PORTLESS_URL` (supports `{service}`, automatically set by the `portless` CLI wrapper), then `http://localhost:<port>`. |
+| Option     | Default      | Description                                                                                                                                                                                                                                                                                       |
+| ---------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `service`  | _(required)_ | Service name: `'vercel'`, `'github'`, `'google'`, `'slack'`, `'apple'`, `'microsoft'`, `'okta'`, `'aws'`, `'resend'`, `'stripe'`, `'mongoatlas'`, `'clerk'`, `'linear'`, or `'twilio'`                                                                                                            |
+| `port`     | `4000`       | Port for the HTTP server                                                                                                                                                                                                                                                                          |
+| `hostname` | `127.0.0.1`  | Listening address for built-in and custom emulators                                                                                                                                                                                                                                               |
+| `seed`     | none         | Inline seed data (same shape as YAML config)                                                                                                                                                                                                                                                      |
+| `baseUrl`  | none         | Override advertised base URL. Per-service `baseUrl` in seed config takes highest priority, then this option, then `EMULATE_BASE_URL` env var (supports `{service}`), then `PORTLESS_URL` (supports `{service}`, automatically set by the `portless` CLI wrapper), then `http://localhost:<port>`. |
 
 Use `hostname: '0.0.0.0'` to allow connections from containers or other machines, and `baseUrl` to advertise a URL reachable by those clients.
 
 ### Instance methods
 
-| Method | Description |
-|--------|-------------|
-| `url` | Base URL of the running server |
+| Method             | Description                                          |
+| ------------------ | ---------------------------------------------------- |
+| `url`              | Base URL of the running server                       |
 | `generatedSecrets` | Readonly secrets generated while preparing seed data |
-| `reset()` | Wipe the store and replay seed data |
-| `close()` | Shut down the HTTP server, returns a Promise |
+| `reset()`          | Wipe the store and replay seed data                  |
+| `close()`          | Shut down the HTTP server, returns a Promise         |
 
 ## Configuration
 
@@ -740,6 +745,9 @@ github:
       events: [push, pull_request]
       webhook_url: "http://localhost:3000/webhooks/github"
       webhook_secret: "my-secret"
+      client_id: "Iv1.my-app"
+      client_secret: "my-app-secret"
+      callback_url: "http://localhost:3000/api/github/setup"
       installations:
         - installation_id: 100
           account: my-org
@@ -753,8 +761,21 @@ Installation access tokens act as the configured GitHub App bot for repository w
 Inspect secret-free metadata for minted installation tokens at `GET /_emulate/installation-tokens`.
 
 **App webhook delivery**: When events occur on repos where a GitHub App is installed, the emulator mirrors real GitHub behavior:
+
 - All webhook payloads (including repo and org hooks) include an `installation` field with `{ id, node_id }`.
 - If the app has a `webhook_url`, the emulator delivers the event there with the `installation` field and (if configured) an `X-Hub-Signature-256` header signed with `webhook_secret`.
+
+**App installation flow**: Seed `client_id`, `client_secret`, and `callback_url` on an app to emulate the install link with user authorization during installation:
+
+- `GET /apps/<slug>/installations/new?state=<value>` shows a seeded user picker, then lets you pick the user's account or one of their orgs.
+- Installing on the personal account or an org the user owns creates the installation. Installing again reuses it.
+- The emulator then redirects to `callback_url` with `code`, `installation_id`, `setup_action`, and the original `state`. `setup_action` is `install` for a new installation and `update` for an existing one. An `update` carries no `code` once the user has authorized the app.
+- A plain org member gets `setup_action=request` with a `code` and no `installation_id`, and no installation is created.
+- Tests can skip the pages with `POST /apps/<slug>/installations/new` and form fields `login`, `account`, and `state`.
+
+`POST /login/oauth/access_token` with the app's `client_id` and `client_secret` exchanges the code for a user access token. The response has a `ghu_` access token that expires in 8 hours and a `ghr_` refresh token. The app's credentials are always checked, even when no `oauth_apps` are seeded, and the app's codes cannot be exchanged with other client credentials. `grant_type=refresh_token` rotates the pair, and a used refresh token is rejected. `/login/oauth/authorize` also accepts the app's `client_id`.
+
+`GET /user/installations` lists installations on the user's account and on the orgs they belong to, paginated with `page`, `per_page`, and a `Link` header. With a `ghu_` token it lists only that app's installations.
 
 ### Slack OAuth Apps
 
@@ -816,6 +837,7 @@ microsoft:
 Every endpoint below is fully stateful with Vercel-style JSON responses and cursor-based pagination.
 
 ### User & Teams
+
 - `GET /v2/user` - authenticated user
 - `PATCH /v2/user` - update user
 - `GET /v2/teams` - list teams (cursor paginated)
@@ -826,6 +848,7 @@ Every endpoint below is fully stateful with Vercel-style JSON responses and curs
 - `POST /v2/teams/:teamId/members` - add member
 
 ### Projects
+
 - `POST /v11/projects` - create project (with optional env vars and git integration)
 - `GET /v10/projects` - list projects (search, cursor pagination)
 - `GET /v9/projects/:idOrName` - get project (includes env vars)
@@ -835,6 +858,7 @@ Every endpoint below is fully stateful with Vercel-style JSON responses and curs
 - `PATCH /v1/projects/:idOrName/protection-bypass` - manage bypass secrets
 
 ### Deployments
+
 - `POST /v13/deployments` - create deployment (auto-transitions to READY)
 - `GET /v13/deployments/:idOrUrl` - get deployment (by ID or URL)
 - `GET /v6/deployments` - list deployments (filter by project, target, state)
@@ -847,6 +871,7 @@ Every endpoint below is fully stateful with Vercel-style JSON responses and curs
 - `POST /v2/files` - upload file (by SHA digest)
 
 ### Domains
+
 - `POST /v10/projects/:idOrName/domains` - add domain (with verification challenge)
 - `GET /v9/projects/:idOrName/domains` - list domains
 - `GET /v9/projects/:idOrName/domains/:domain` - get domain
@@ -855,6 +880,7 @@ Every endpoint below is fully stateful with Vercel-style JSON responses and curs
 - `POST /v9/projects/:idOrName/domains/:domain/verify` - verify domain
 
 ### Environment Variables
+
 - `GET /v10/projects/:idOrName/env` - list env vars (with decrypt option)
 - `POST /v10/projects/:idOrName/env` - create env vars (single, batch, upsert)
 - `GET /v10/projects/:idOrName/env/:id` - get env var
@@ -862,6 +888,7 @@ Every endpoint below is fully stateful with Vercel-style JSON responses and curs
 - `DELETE /v9/projects/:idOrName/env/:id` - delete env var
 
 ### Blob
+
 Implements the Vercel Blob API used by the `@vercel/blob` SDK (`put`, `head`, `list`, `del`).
 
 - `PUT /api/blob?pathname=<path>` - upload a blob (honors `x-add-random-suffix`, `x-allow-overwrite`, `x-content-type`, `x-cache-control-max-age`, `x-if-match` headers)
@@ -893,6 +920,7 @@ Any token of the form `vercel_blob_rw_<storeId>_<secret>` is accepted; the store
 Every endpoint below is fully stateful. Creates, updates, and deletes persist in memory and affect related entities.
 
 ### Users
+
 - `GET /user` - authenticated user
 - `PATCH /user` - update profile
 - `GET /users/:username` - get user
@@ -903,6 +931,7 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - `GET /users/:username/following` - list following
 
 ### Repositories
+
 - `GET /repos/:owner/:repo` - get repo
 - `GET /repositories/:id` - get repo by numeric ID
 - `POST /user/repos` - create user repo
@@ -920,6 +949,7 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - `GET /repos/:owner/:repo/tags` - list tags
 
 ### Contents & Commit History
+
 - `GET /repos/:owner/:repo/readme` - get the repository README
 - `GET /repos/:owner/:repo/contents/:path` - get a file or list a directory at a ref
 - Send `Accept: application/vnd.github.raw` or `application/vnd.github.raw+json` to file Contents and README requests to receive raw bytes; directory and submodule responses remain JSON
@@ -930,6 +960,7 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - `GET /repos/:owner/:repo/compare/:base...:head` - compare two refs
 
 ### Issues
+
 - `GET /repos/:owner/:repo/issues` - list (filter by state, labels, assignee, milestone, creator, since)
 - `POST /repos/:owner/:repo/issues` - create
 - `GET /repos/:owner/:repo/issues/:number` - get
@@ -940,6 +971,7 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - `POST/DELETE /repos/:owner/:repo/issues/:number/assignees` - manage assignees
 
 ### Pull Requests
+
 - `GET /repos/:owner/:repo/pulls` - list (filter by state, head, base)
 - `POST /repos/:owner/:repo/pulls` - create
 - `GET /repos/:owner/:repo/pulls/:number` - get
@@ -951,12 +983,14 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - `PUT /repos/:owner/:repo/pulls/:number/update-branch` - update branch
 
 ### Comments
+
 - Issue comments: full CRUD on `/repos/:owner/:repo/issues/:number/comments`
 - Review comments: full CRUD on `/repos/:owner/:repo/pulls/:number/comments`
 - Commit comments: full CRUD on `/repos/:owner/:repo/commits/:sha/comments`
 - Repo-wide listings for each type
 
 ### Reviews
+
 - `GET /repos/:owner/:repo/pulls/:number/reviews` - list
 - `POST /repos/:owner/:repo/pulls/:number/reviews` - create (with inline comments)
 - `GET/PUT /repos/:owner/:repo/pulls/:number/reviews/:id` - get/update
@@ -964,10 +998,12 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - `PUT /repos/:owner/:repo/pulls/:number/reviews/:id/dismissals` - dismiss
 
 ### Labels & Milestones
+
 - Labels: full CRUD, add/remove from issues, replace all
 - Milestones: full CRUD, state transitions, issue counts
 
 ### Branches & Git Data
+
 - Branches: list, get, protection CRUD (status checks, PR reviews, enforce admins)
 - Refs: get, match, create, update, delete
 - Commits: get, create
@@ -976,21 +1012,25 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - Tags: get, create
 
 ### Organizations & Teams
+
 - Orgs: get, update, list
 - Org members: list, check, remove, get/set membership
 - Teams: full CRUD, members, repos
 
 ### Releases
+
 - Releases: full CRUD, latest, by tag
 - Release assets: full CRUD, upload
 - Generate release notes
 
 ### Webhooks
+
 - Repo webhooks: full CRUD, ping, test, deliveries
 - Org webhooks: full CRUD, ping
 - Real HTTP delivery to registered URLs on all state changes
 
 ### Search
+
 - `GET /search/repositories` - full query syntax (user, org, language, topic, stars, forks, etc.)
 - `GET /search/issues` - issues + PRs (repo, is, author, label, milestone, state, etc.)
 - `GET /search/users` - users + orgs
@@ -1000,6 +1040,7 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - `GET /search/labels` - label search
 
 ### Actions
+
 - Workflows: list, get, enable/disable, dispatch
 - Workflow runs: list, get, cancel, rerun, delete, logs
 - Jobs: list, get, logs
@@ -1007,6 +1048,7 @@ Every endpoint below is fully stateful. Creates, updates, and deletes persist in
 - Secrets: repo + org CRUD
 
 ### Checks
+
 - Check runs: create, update, get, annotations, rerequest, list by ref/suite. Ref based lookups accept branch and tag refs containing slashes.
 - Check suites: create, get, preferences, rerequest, list by ref. Ref based lookups accept branch and tag refs containing slashes.
 - Automatic suite status rollup from check run results
@@ -1016,6 +1058,7 @@ Check-run lists by ref and suite support `page` and `per_page` (default 30, maxi
 Checks created with installation tokens include their GitHub App in API responses and webhooks. Suites are separated by App and commit, and `filter=latest` keeps the newest run for each App and check name. User-token checks return `app: null`; request-body `app_id` cannot set or change attribution.
 
 ### Misc
+
 - `GET /rate_limit` - rate limit status
 - `GET /meta` - server metadata
 - `GET /octocat` - ASCII art
@@ -1069,7 +1112,16 @@ Slack message text is limited to 40,000 Unicode characters across chat writes, i
 ```yaml
 slack:
   oauth_apps:
-    - { client_id: relay.app, client_secret: s, name: Relay, redirect_uris: [], app_id: A0RELAY, bot_id: B0RELAY, bot_user_id: U0RELAYBOT, bot_icon: https://example.com/relay.png }
+    - {
+        client_id: relay.app,
+        client_secret: s,
+        name: Relay,
+        redirect_uris: [],
+        app_id: A0RELAY,
+        bot_id: B0RELAY,
+        bot_user_id: U0RELAYBOT,
+        bot_icon: https://example.com/relay.png,
+      }
   tokens:
     - { token: xapp-1-relay, type: app, app_id: A0RELAY }
     - { token: xoxb-relay, type: bot, user: U0RELAYBOT, bot_id: B0RELAY }
@@ -1088,6 +1140,7 @@ slack:
 - `conversations.mark` sets the `last_read` that `conversations.info` returns, and dispatches `channel_marked`, `group_marked`, `im_marked`, or `mpim_marked`.
 
 ### Auth & Chat
+
 - `POST /api/auth.test` - test authentication
 - `POST /api/chat.postMessage` - post message with text or rich payload fields (supports threads via `thread_ts` and DM user IDs)
 - `POST /api/chat.postEphemeral` - post ephemeral message outside channel history
@@ -1100,6 +1153,7 @@ slack:
 - `POST /api/chat.meMessage` - /me message
 
 ### Conversations
+
 - `POST /api/conversations.list` - list conversations (cursor pagination, `types`, `exclude_archived`)
 - `POST /api/conversations.info` - get channel info
 - `POST /api/conversations.create` - create channel
@@ -1115,6 +1169,7 @@ slack:
 - `POST /api/conversations.members` - list members
 
 ### Users & Reactions
+
 - `POST /api/users.list` - list users (cursor pagination)
 - `POST /api/users.info` - get user info
 - `POST /api/users.lookupByEmail` - lookup by email
@@ -1125,6 +1180,7 @@ slack:
 - `POST /api/reactions.add` / `reactions.remove` / `reactions.get` - manage reactions
 
 ### Files
+
 - `POST /api/files.getUploadURLExternal` - create a local external upload session
 - `POST /upload/v1/:fileId` - receive raw uploaded file bytes
 - `POST /api/files.completeUploadExternal` - complete uploads and optionally share file messages
@@ -1134,6 +1190,7 @@ slack:
 - `POST /api/files.delete` - delete a completed file
 
 ### Pins & Bookmarks
+
 - `POST /api/pins.add` - pin a message to a channel
 - `GET /api/pins.list` / `POST /api/pins.list` - list pinned message items for a channel
 - `POST /api/pins.remove` - remove a message pin from a channel
@@ -1143,6 +1200,7 @@ slack:
 - `POST /api/bookmarks.remove` - remove a bookmark from a channel
 
 ### Views
+
 - `POST /api/views.publish` - publish or update an App Home view for a user
 - `POST /api/views.open` - open a modal view
 - `POST /api/views.update` - update a view by `view_id` or `external_id`
@@ -1152,6 +1210,7 @@ slack:
 Modal opens and pushes accept `trigger_id` or `interactivity_pointer` from an interaction payload or `/api/views.generateTriggerId`. Generate push values with an existing `view_id`. Triggers expire after 3 seconds by default; set `slack.view_trigger_ttl_seconds` to a positive number to allow more time in local tests.
 
 ### Team, Bots & Webhooks
+
 - `POST /api/team.info` - workspace info
 - `POST /api/bots.info` - bot info
 - `POST /services/:teamId/:botId/:webhookId` - incoming webhook with text or rich payload fields
@@ -1228,6 +1287,7 @@ A button payload's `response_url` accepts JSON without a bearer token, up to fiv
 A modal receiver must acknowledge within three seconds. An empty HTTP 200 closes the submitted view, while `response_action: "clear"` closes its stack. `errors` retains the view and returns block errors; `update` replaces its contents; `push` adds a new view subject to the three-view limit. Delivery failures and invalid acknowledgements leave the modal open. Shortcuts, slash commands, non-button actions, `view_closed`, and `block_suggestion` are not simulated.
 
 ### OAuth
+
 - `GET /oauth/v2/authorize` - authorization (shows user picker)
 - `POST /oauth/v2/authorize/callback` - local user picker callback that creates the auth code
 - `POST /api/oauth.v2.access` - token exchange
@@ -1238,6 +1298,7 @@ A modal receiver must acknowledge within three seconds. An empty HTTP 200 closes
 Uninstall dispatches `app_uninstalled` and `tokens_revoked` to matching event subscriptions with the removed app's `api_app_id`. `tokens_revoked.tokens.oauth` and `.bot` contain deduplicated user IDs, never token strings. Credentials are invalid before callbacks are delivered. Handlers should accept either event order. The app definition remains available for a new OAuth installation; reinstalling issues fresh tokens without reactivating revoked ones.
 
 ### Inspector
+
 - `GET /` - tabbed local inspector for conversations, messages, files, views, auth records, incoming webhooks, event subscriptions, and event deliveries
 
 When a supported Slack write emits an `event_callback`, the payload contains the inner `event` plus outer `token`, `api_app_id`, `authorizations`, `team_id`, `event_id`, and `event_time`. The team comes from the presented Slack token's installation; development tokens without a stored Slack record fall back to the affected channel, user, or file's team, then the seeded workspace team (or `T000000001`). Incoming webhook posts use their webhook record's team, or the target channel's team when no record matches. `event_time` is an integer Unix timestamp in seconds. Each logical event gets a new `event_id`, shared across deliveries to multiple subscribers.
@@ -1361,7 +1422,6 @@ To test inbound SMS webhooks, configure a seeded phone number `sms_url`, then ca
 
 Current Twilio limits: no carrier delivery, A2P 10DLC, toll-free verification, real phone number purchasing, exact rate limits, Studio, Flex, TaskRouter, Video, Sync, Segment, SendGrid, Conversations SDK websocket behavior, or complete TwiML interpreter.
 
-
 ## Telegram Bot API
 
 Telegram Bot API emulation at the real URL shape, `<emulator>/bot<token>/<method>`, backed by [telegram-bot-test-server](https://github.com/anatolyben/telegram-bot-test-server) and wrapped in emulate's seed, control API, reset, and inspector. Point any client's API root at the emulator: grammy (`client.apiRoot`), Telegraf (`telegram.apiRoot`), or node-telegram-bot-api (`baseApiUrl`). Nothing talks to Telegram.
@@ -1391,7 +1451,7 @@ telegram:
       username: my_bot
       first_name: My Bot
       description: Shown by getMyDescription
-      webhook:                # optional: deliver updates here from startup, no setWebhook call needed
+      webhook: # optional: deliver updates here from startup, no setWebhook call needed
         url: http://localhost:3000/api/telegram-webhook
         secret_token: local-secret
   users:
@@ -1404,7 +1464,7 @@ telegram:
       owner: alice
       forum: true
       members: [developer]
-      bots: [my_bot]          # or { bot: my_bot, status: member, rights: { can_pin_messages: true } }
+      bots: [my_bot] # or { bot: my_bot, status: member, rights: { can_pin_messages: true } }
       topics: [ideas]
 ```
 
@@ -1420,20 +1480,20 @@ The adapter adds forum topic management and bot profile text: createForumTopic, 
 
 Act as Telegram users. Chats and users are referenced by seed name or numeric id; `topic` takes a topic name or thread id.
 
-| Route | Effect |
-| --- | --- |
-| `GET /_telegram/ids` | Bot, user, chat, and topic ids by seed name |
-| `POST /_telegram/users` `{ name, first_name?, username? }` | Create a user |
-| `POST /_telegram/chats/:chat/members` `{ user }` | A user joins a chat |
-| `POST /_telegram/chats/:chat/topics` `{ name, by? }` | Create a forum topic |
+| Route                                                                                         | Effect                                                              |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `GET /_telegram/ids`                                                                          | Bot, user, chat, and topic ids by seed name                         |
+| `POST /_telegram/users` `{ name, first_name?, username? }`                                    | Create a user                                                       |
+| `POST /_telegram/chats/:chat/members` `{ user }`                                              | A user joins a chat                                                 |
+| `POST /_telegram/chats/:chat/topics` `{ name, by? }`                                          | Create a forum topic                                                |
 | `POST /_telegram/chats/:chat/messages` `{ from, text?, caption?, reply_to?, topic?, media? }` | A user posts; `media` is `{ type, base64, file_name?, mime_type? }` |
-| `POST /_telegram/chats/:chat/messages/:id/edit` `{ from, text?, caption? }` | The author edits a message |
-| `POST /_telegram/chats/:chat/messages/:id/reactions` `{ from, emoji }` | Set or clear (`null`) a reaction |
-| `POST /_telegram/chats/:chat/messages/:id/buttons` `{ from, data }` | Press an inline button; resolves with the bot's answerCallbackQuery |
-| `POST /_telegram/users/:user/messages` `{ text?, caption?, reply_to?, media? }` | A user messages the bot directly, with text or media |
-| `POST /_telegram/users/:user/messages/:id/buttons` `{ data }` | Press a button in the private chat |
-| `GET /_telegram/chats/:chat/messages`, `GET /_telegram/users/:user/messages` | Messages, newest first |
-| `GET /_telegram/calls` | Bot API calls made since seeding, and unimplemented methods called |
+| `POST /_telegram/chats/:chat/messages/:id/edit` `{ from, text?, caption? }`                   | The author edits a message                                          |
+| `POST /_telegram/chats/:chat/messages/:id/reactions` `{ from, emoji }`                        | Set or clear (`null`) a reaction                                    |
+| `POST /_telegram/chats/:chat/messages/:id/buttons` `{ from, data }`                           | Press an inline button; resolves with the bot's answerCallbackQuery |
+| `POST /_telegram/users/:user/messages` `{ text?, caption?, reply_to?, media? }`               | A user messages the bot directly, with text or media                |
+| `POST /_telegram/users/:user/messages/:id/buttons` `{ data }`                                 | Press a button in the private chat                                  |
+| `GET /_telegram/chats/:chat/messages`, `GET /_telegram/users/:user/messages`                  | Messages, newest first                                              |
+| `GET /_telegram/calls`                                                                        | Bot API calls made since seeding, and unimplemented methods called  |
 
 Each action resolves after the update reached the bot's webhook or getUpdates queue. The inspector at `/` shows seeded ids and calls.
 
@@ -1442,7 +1502,6 @@ Each action resolves after the update reached the bot's webhook or getUpdates qu
 - Webhook deliveries go straight from the backend to the bot, so they do not appear in emulate's webhook delivery log.
 - createForumTopic and editForumTopic post the service message as the chat's owner, so bots in the chat (including the caller) receive it as an update.
 - Ids for users, chats, and topics are assigned at startup rather than taken from the seed.
-
 
 ## WorkOS API
 
@@ -1552,7 +1611,9 @@ Supported operations:
 - `PurgeQueue`, `DeleteQueue`
 
 ### IAM
+
 All operations via `POST /iam/` with `Action` parameter:
+
 - `CreateUser`, `GetUser`, `ListUsers`, `DeleteUser`
 - `CreateAccessKey`, `ListAccessKeys`, `DeleteAccessKey`
 - `CreateRole`, `GetRole`, `ListRoles`, `DeleteRole`
@@ -1569,11 +1630,13 @@ const cognito = new CognitoIdentityProviderClient({
   region: "us-east-1",
   credentials: { accessKeyId: "local-access-key", secretAccessKey: "local-secret" },
 });
-const result = await cognito.send(new InitiateAuthCommand({
-  ClientId: "emulateclient",
-  AuthFlow: "USER_PASSWORD_AUTH",
-  AuthParameters: { USERNAME: "developer", PASSWORD: "LocalPass123!" },
-}));
+const result = await cognito.send(
+  new InitiateAuthCommand({
+    ClientId: "emulateclient",
+    AuthFlow: "USER_PASSWORD_AUTH",
+    AuthParameters: { USERNAME: "developer", PASSWORD: "LocalPass123!" },
+  }),
+);
 ```
 
 A default User Pool `us-east-1_emulate`, public app client `emulateclient`, and Identity Pool `us-east-1:00000000-0000-4000-8000-000000000001` are created without users. Seed a confirmed account for the example above:
@@ -1608,7 +1671,9 @@ Identity Pools support `GetId` and `GetCredentialsForIdentity`. Supply the ID to
 SRP, MFA, external identity providers, Lambda triggers, pool/client management APIs, `ListUsers` filters, and Identity Pool role selection are not simulated. Administrative requests follow the AWS emulator's permissive credential behavior: SigV4 signatures and IAM policies are not evaluated. Identity Pool credentials are generated test credentials, without role or policy evaluation.
 
 ### STS
+
 All operations via `POST /sts/` with `Action` parameter:
+
 - `GetCallerIdentity`, `AssumeRole`
 
 ## Next.js Integration
@@ -1629,27 +1694,27 @@ Create a catch-all route that serves emulator traffic:
 
 ```typescript
 // app/emulate/[...path]/route.ts
-import { createEmulateHandler } from '@emulators/adapter-next'
-import * as github from '@emulators/github'
-import * as google from '@emulators/google'
+import { createEmulateHandler } from "@emulators/adapter-next";
+import * as github from "@emulators/github";
+import * as google from "@emulators/google";
 
 export const { GET, POST, PUT, PATCH, DELETE } = createEmulateHandler({
   services: {
     github: {
       emulator: github,
       seed: {
-        users: [{ login: 'octocat', name: 'The Octocat' }],
-        repos: [{ owner: 'octocat', name: 'hello-world', auto_init: true }],
+        users: [{ login: "octocat", name: "The Octocat" }],
+        repos: [{ owner: "octocat", name: "hello-world", auto_init: true }],
       },
     },
     google: {
       emulator: google,
       seed: {
-        users: [{ email: 'test@example.com', name: 'Test User' }],
+        users: [{ email: "test@example.com", name: "Test User" }],
       },
     },
   },
-})
+});
 ```
 
 GitHub App seeds may omit `private_key`. Retain the handler to call server-only `generatedSecrets()`; explicit keys are excluded. Persisted snapshots contain generated keys, so keep the backend private.
@@ -1659,19 +1724,17 @@ GitHub App seeds may omit `private_key`. Retain the handler to call server-only 
 Point your provider at the emulator paths on the same origin:
 
 ```typescript
-import GitHub from 'next-auth/providers/github'
+import GitHub from "next-auth/providers/github";
 
-const baseUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'
+const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
 
 GitHub({
-  clientId: 'any-value',
-  clientSecret: 'any-value',
+  clientId: "any-value",
+  clientSecret: "any-value",
   authorization: { url: `${baseUrl}/emulate/github/login/oauth/authorize` },
   token: { url: `${baseUrl}/emulate/github/login/oauth/access_token` },
   userinfo: { url: `${baseUrl}/emulate/github/user` },
-})
+});
 ```
 
 No `oauth_apps` need to be seeded. When none are configured, the emulator skips `client_id`, `client_secret`, and `redirect_uri` validation.
@@ -1682,17 +1745,17 @@ Emulator UI pages use bundled fonts. Wrap your Next.js config to include them in
 
 ```typescript
 // next.config.mjs
-import { withEmulate } from '@emulators/adapter-next'
+import { withEmulate } from "@emulators/adapter-next";
 
 export default withEmulate({
   // your normal Next.js config
-})
+});
 ```
 
 If you mount the catch-all at a custom path, pass the matching prefix:
 
 ```typescript
-export default withEmulate(nextConfig, { routePrefix: '/api/emulate' })
+export default withEmulate(nextConfig, { routePrefix: "/api/emulate" });
 ```
 
 ### Persistence
@@ -1700,18 +1763,22 @@ export default withEmulate(nextConfig, { routePrefix: '/api/emulate' })
 By default, emulator state is in-memory and resets on every cold start. To persist state across restarts, pass a `persistence` adapter:
 
 ```typescript
-import { createEmulateHandler } from '@emulators/adapter-next'
-import * as github from '@emulators/github'
+import { createEmulateHandler } from "@emulators/adapter-next";
+import * as github from "@emulators/github";
 
 const kvAdapter = {
-  async load() { return await kv.get('emulate-state') },
-  async save(data: string) { await kv.set('emulate-state', data) },
-}
+  async load() {
+    return await kv.get("emulate-state");
+  },
+  async save(data: string) {
+    await kv.set("emulate-state", data);
+  },
+};
 
 export const { GET, POST, PUT, PATCH, DELETE } = createEmulateHandler({
   services: { github: { emulator: github } },
   persistence: kvAdapter,
-})
+});
 ```
 
 For local development, `@emulators/core` ships `filePersistence`:
@@ -1743,27 +1810,29 @@ Create a named catch-all route that serves emulator traffic:
 
 ```typescript
 // server/routes/emulate/[...path].ts
-import { createEmulateHandler } from '@emulators/adapter-nuxt'
-import * as github from '@emulators/github'
-import * as google from '@emulators/google'
+import { createEmulateHandler } from "@emulators/adapter-nuxt";
+import * as github from "@emulators/github";
+import * as google from "@emulators/google";
 
-export default defineEventHandler(createEmulateHandler({
-  services: {
-    github: {
-      emulator: github,
-      seed: {
-        users: [{ login: 'octocat', name: 'The Octocat' }],
-        repos: [{ owner: 'octocat', name: 'hello-world', auto_init: true }],
+export default defineEventHandler(
+  createEmulateHandler({
+    services: {
+      github: {
+        emulator: github,
+        seed: {
+          users: [{ login: "octocat", name: "The Octocat" }],
+          repos: [{ owner: "octocat", name: "hello-world", auto_init: true }],
+        },
+      },
+      google: {
+        emulator: google,
+        seed: {
+          users: [{ email: "test@example.com", name: "Test User" }],
+        },
       },
     },
-    google: {
-      emulator: google,
-      seed: {
-        users: [{ email: 'test@example.com', name: 'Test User' }],
-      },
-    },
-  },
-}))
+  }),
+);
 ```
 
 GitHub App seeds may omit `private_key`. Retain the handler to call server-only `generatedSecrets()`; explicit keys are excluded. Persisted snapshots contain generated keys, so keep the backend private.
@@ -1774,11 +1843,13 @@ Emulator UI pages use bundled fonts. Wrap your Nuxt config so Nitro traces the c
 
 ```typescript
 // nuxt.config.ts
-import { withEmulate } from '@emulators/adapter-nuxt'
+import { withEmulate } from "@emulators/adapter-nuxt";
 
-export default defineNuxtConfig(withEmulate({
-  // your normal Nuxt config
-}))
+export default defineNuxtConfig(
+  withEmulate({
+    // your normal Nuxt config
+  }),
+);
 ```
 
 ### OAuth configuration
@@ -1786,15 +1857,15 @@ export default defineNuxtConfig(withEmulate({
 Point your OAuth provider at the emulator paths on the same origin:
 
 ```typescript
-const baseUrl = process.env.NUXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+const baseUrl = process.env.NUXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const githubOAuth = {
-  clientId: 'any-value',
-  clientSecret: 'any-value',
+  clientId: "any-value",
+  clientSecret: "any-value",
   authorizationUrl: `${baseUrl}/emulate/github/login/oauth/authorize`,
   tokenUrl: `${baseUrl}/emulate/github/login/oauth/access_token`,
   userInfoUrl: `${baseUrl}/emulate/github/user`,
-}
+};
 ```
 
 No `oauth_apps` need to be seeded. When none are configured, the emulator skips `client_id`, `client_secret`, and `redirect_uri` validation.
@@ -1804,18 +1875,24 @@ No `oauth_apps` need to be seeded. When none are configured, the emulator skips 
 By default, emulator state is in-memory and resets on every cold start. To persist state across restarts, pass a `persistence` adapter:
 
 ```typescript
-import { createEmulateHandler } from '@emulators/adapter-nuxt'
-import * as github from '@emulators/github'
+import { createEmulateHandler } from "@emulators/adapter-nuxt";
+import * as github from "@emulators/github";
 
 const storageAdapter = {
-  async load() { return await useStorage('emulate').getItem<string>('state') },
-  async save(data: string) { await useStorage('emulate').setItem('state', data) },
-}
+  async load() {
+    return await useStorage("emulate").getItem<string>("state");
+  },
+  async save(data: string) {
+    await useStorage("emulate").setItem("state", data);
+  },
+};
 
-export default defineEventHandler(createEmulateHandler({
-  services: { github: { emulator: github } },
-  persistence: storageAdapter,
-}))
+export default defineEventHandler(
+  createEmulateHandler({
+    services: { github: { emulator: github } },
+    persistence: storageAdapter,
+  }),
+);
 ```
 
 The persistence adapter loads on cold start and saves after mutations. Generated identities also require atomic create-or-read `initialize`; see `@emulators/core`.

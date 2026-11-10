@@ -68,6 +68,9 @@ GitHub API coverage:
   Suites are separated by App and commit; latest runs are grouped by App and check name.
   User-token checks return app: null; request-body app_id cannot change attribution.
   Inspect minted installation-token metadata at GET /_emulate/installation-tokens.
+  Apps seeded with client_id, client_secret, and callback_url serve /apps/<slug>/installations/new?state=...
+  It redirects to callback_url with code, installation_id, setup_action (install, update, request), and state.
+  The code exchanges for an expiring ghu_ token with a ghr_ refresh token; GET /user/installations lists installs.
 
 Linear API coverage:
   Issue queries and mutations include numeric priority and derived priorityLabel fields.

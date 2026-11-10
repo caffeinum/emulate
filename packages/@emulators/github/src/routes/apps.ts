@@ -1,7 +1,10 @@
 import { randomBytes } from "crypto";
 import type { RouteContext, AuthApp } from "@emulators/core";
+import { parsePagination, setLinkHeader, unauthorized } from "@emulators/core";
 import { getGitHubStore } from "../store.js";
 import { formatApp } from "../helpers.js";
+import { orgsForUser } from "./app-install.js";
+import { getTokenToClientId } from "./oauth.js";
 
 export function appsRoutes({ app, store, baseUrl, tokenMap }: RouteContext): void {
   const gh = getGitHubStore(store);
@@ -295,6 +298,35 @@ export function appsRoutes({ app, store, baseUrl, tokenMap }: RouteContext): voi
 
     const ghApp = gh.apps.all().find((a) => a.app_id === inst.app_id);
     return c.json(formatInstallation(inst, ghApp, baseUrl));
+  });
+
+  /** Installations on the user's account and orgs; a GitHub App user token sees only its own app's. */
+  app.get("/user/installations", (c) => {
+    const authUser = c.get("authUser");
+    const user = authUser ? gh.users.findOneBy("login", authUser.login) : undefined;
+    if (!user) throw unauthorized();
+    const token = c.get("authToken");
+    const tokenClientId = token ? getTokenToClientId(store).get(token) : undefined;
+    const tokenApp = tokenClientId ? gh.apps.findOneBy("client_id", tokenClientId) : undefined;
+    const orgIds = new Set(orgsForUser(gh, user.id).map((org) => org.id));
+    const accessible = gh.appInstallations
+      .all()
+      .filter((inst) => !tokenApp || inst.app_id === tokenApp.app_id)
+      .filter((inst) => (inst.account_type === "User" ? inst.account_id === user.id : orgIds.has(inst.account_id)))
+      .sort((a, b) => a.installation_id - b.installation_id);
+    const { page, per_page } = parsePagination(c);
+    setLinkHeader(c, accessible.length, page, per_page);
+    const pageItems = accessible.slice((page - 1) * per_page, page * per_page);
+    return c.json({
+      total_count: accessible.length,
+      installations: pageItems.map((inst) =>
+        formatInstallation(
+          inst,
+          gh.apps.all().find((a) => a.app_id === inst.app_id),
+          baseUrl,
+        ),
+      ),
+    });
   });
 
   function formatInstallation(inst: any, ghApp: any, baseUrl: string) {

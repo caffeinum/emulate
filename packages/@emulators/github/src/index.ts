@@ -33,6 +33,7 @@ import { rateLimitRoutes } from "./routes/rate-limit.js";
 import { metaRoutes } from "./routes/meta.js";
 import { oauthRoutes } from "./routes/oauth.js";
 import { appsRoutes } from "./routes/apps.js";
+import { appInstallRoutes } from "./routes/app-install.js";
 import { installationTokenRoutes } from "./routes/installation-tokens.js";
 import { findOrCreateBlob, findOrCreateCommit, findOrCreateTree } from "./git-helpers.js";
 
@@ -89,6 +90,9 @@ export interface GitHubSeedConfig {
     webhook_url?: string;
     webhook_secret?: string;
     description?: string;
+    client_id?: string;
+    client_secret?: string;
+    callback_url?: string;
     installations?: Array<{
       installation_id: number;
       account: string;
@@ -501,6 +505,9 @@ export function seedFromConfig(store: Store, baseUrl: string, config: GitHubSeed
     for (const a of config.apps) {
       const existingApp = gh.apps.findOneBy("slug", a.slug);
       if (existingApp) continue;
+      if (a.client_id && !a.client_secret) {
+        throw new Error(`GitHub App "${a.slug}" sets client_id without client_secret`);
+      }
       const privateKey = a.private_key;
       if (!privateKey) {
         throw new Error(`GitHub App "${a.slug}" requires private_key`);
@@ -516,6 +523,9 @@ export function seedFromConfig(store: Store, baseUrl: string, config: GitHubSeed
         webhook_url: a.webhook_url ?? null,
         webhook_secret: a.webhook_secret ?? null,
         description: a.description ?? null,
+        client_id: a.client_id ?? null,
+        client_secret: a.client_secret ?? null,
+        callback_url: a.callback_url ?? null,
       });
 
       if (a.installations) {
@@ -675,6 +685,7 @@ export const githubPlugin: ServicePlugin = {
     metaRoutes(ctx);
     oauthRoutes(ctx);
     appsRoutes(ctx);
+    appInstallRoutes(ctx);
     installationTokenRoutes(ctx);
     contentsRoutes(ctx);
     // Registered last: the catch-all /commits/:ref{.+} route must not shadow

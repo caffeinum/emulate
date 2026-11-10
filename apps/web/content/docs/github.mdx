@@ -11,23 +11,25 @@ The programmatic `createEmulator` API can generate a GitHub App key when `privat
 
 ```typescript
 const github = await createEmulator({
-  service: 'github',
+  service: "github",
   seed: {
     github: {
-      users: [{ login: 'octocat' }],
-      apps: [{
-        app_id: 12345,
-        slug: 'my-github-app',
-        name: 'My GitHub App',
-        installations: [{ installation_id: 100, account: 'octocat' }],
-      }],
+      users: [{ login: "octocat" }],
+      apps: [
+        {
+          app_id: 12345,
+          slug: "my-github-app",
+          name: "My GitHub App",
+          installations: [{ installation_id: 100, account: "octocat" }],
+        },
+      ],
     },
   },
-})
+});
 
 const privateKey = github.generatedSecrets.find(
-  secret => secret.kind === 'github.app_private_key' && secret.id === '12345',
-)?.value
+  (secret) => secret.kind === "github.app_private_key" && secret.id === "12345",
+)?.value;
 ```
 
 The generated RSA-2048 PKCS#1 key remains stable across `reset()` calls. Explicit keys are never included in `generatedSecrets`.
@@ -50,6 +52,20 @@ npx emulate start --service github --seed emulate.config.yaml \
 ```
 
 The destination must not exist. emulate removes inherited ACLs, verifies effective owner-only access, and publishes complete JSON before opening listeners or configuring portless. Handled startup failures remove the invocation-owned artifact. A hard termination can leave a complete artifact that must be removed manually after confirming no invocation is using it. Only generated keys appear in the artifact. Linux requires `setfacl` and `getfacl` from the `acl` package. The flag fails closed when access controls cannot be verified and is not supported on Windows. Without `--generated-secrets-file`, CLI seed files still require `private_key`. Direct `seedFromConfig` calls always require it.
+
+## GitHub App installation flow
+
+Seed `client_id`, `client_secret`, and `callback_url` on an app to emulate the install link with user authorization during installation:
+
+- `GET /apps/<slug>/installations/new?state=<value>` shows a seeded user picker, then lets you pick the user's account or one of their orgs.
+- Installing on the personal account or an org the user owns creates the installation. Installing again reuses it.
+- The emulator then redirects to `callback_url` with `code`, `installation_id`, `setup_action`, and the original `state`. `setup_action` is `install` for a new installation and `update` for an existing one. An `update` carries no `code` once the user has authorized the app.
+- A plain org member gets `setup_action=request` with a `code` and no `installation_id`, and no installation is created.
+- Tests can skip the pages with `POST /apps/<slug>/installations/new` and form fields `login`, `account`, and `state`.
+
+`POST /login/oauth/access_token` with the app's `client_id` and `client_secret` exchanges the code for a user access token. The response has a `ghu_` access token that expires in 8 hours and a `ghr_` refresh token. The app's credentials are always checked, even when no `oauth_apps` are seeded, and the app's codes cannot be exchanged with other client credentials. `grant_type=refresh_token` rotates the pair, and a used refresh token is rejected. `/login/oauth/authorize` also accepts the app's `client_id`.
+
+`GET /user/installations` lists installations on the user's account and on the orgs they belong to, paginated with `page`, `per_page`, and a `Link` header. With a `ghu_` token it lists only that app's installations.
 
 ## OAuth device flow
 
