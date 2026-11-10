@@ -71,6 +71,9 @@ GitHub API coverage:
   A private repository the caller cannot see returns 404, as on GitHub.
   DELETE /applications/:client_id/token and /grant revoke an OAuth app's token or grant.
   Set github.strict_scopes: true to reject tokens the emulator did not issue with 401 Bad credentials.
+  Apps seeded with client_id, client_secret, and callback_url serve /apps/<slug>/installations/new?state=...
+  It redirects to callback_url with code, installation_id, setup_action (install, update, request), and state.
+  The code exchanges for an expiring ghu_ token with a ghr_ refresh token; GET /user/installations lists installs.
 
 Linear API coverage:
   Issue queries and mutations include numeric priority and derived priorityLabel fields.

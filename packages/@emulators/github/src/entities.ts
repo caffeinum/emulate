@@ -494,6 +494,9 @@ export interface GitHubApp extends Entity {
   webhook_url: string | null;
   webhook_secret: string | null;
   description: string | null;
+  client_id: string | null;
+  client_secret: string | null;
+  callback_url: string | null;
 }
 
 export interface GitHubAppInstallation extends Entity {

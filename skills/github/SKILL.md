@@ -23,9 +23,9 @@ npx emulate --service github
 Or programmatically:
 
 ```typescript
-import { createEmulator } from 'emulate'
+import { createEmulator } from "emulate";
 
-const github = await createEmulator({ service: 'github', port: 4001 })
+const github = await createEmulator({ service: "github", port: 4001 });
 // github.url === 'http://localhost:4001'
 ```
 
@@ -33,24 +33,26 @@ For a programmatic GitHub App, omit `private_key` and read the generated RSA key
 
 ```typescript
 const github = await createEmulator({
-  service: 'github',
+  service: "github",
   port: 4001,
   seed: {
     github: {
-      users: [{ login: 'octocat' }],
-      apps: [{
-        app_id: 12345,
-        slug: 'my-github-app',
-        name: 'My GitHub App',
-        installations: [{ installation_id: 100, account: 'octocat' }],
-      }],
+      users: [{ login: "octocat" }],
+      apps: [
+        {
+          app_id: 12345,
+          slug: "my-github-app",
+          name: "My GitHub App",
+          installations: [{ installation_id: 100, account: "octocat" }],
+        },
+      ],
     },
   },
-})
+});
 
 const privateKey = github.generatedSecrets.find(
-  secret => secret.kind === 'github.app_private_key' && secret.id === '12345',
-)?.value
+  (secret) => secret.kind === "github.app_private_key" && secret.id === "12345",
+)?.value;
 ```
 
 The key remains stable across `github.reset()`. Explicit keys are not included in `generatedSecrets`.
@@ -96,6 +98,9 @@ github:
       webhook_url: http://localhost:8080/github/webhook
       webhook_secret: my-webhook-secret
       description: My CI/CD bot
+      client_id: Iv1.my-app
+      client_secret: my-app-secret
+      callback_url: http://localhost:3000/api/github/setup
       installations:
         - installation_id: 100
           account: my-org
@@ -108,6 +113,20 @@ github:
 
 This example intentionally omits `private_key` for programmatic and adapter usage, where the emulator generates an RSA key and exposes it through `generatedSecrets`. For CLI usage, request a private delivery file with `--generated-secrets-file <path>` or provide your own valid key. Without that flag, CLI seed files require `private_key`; do not use a placeholder PEM.
 
+### App installation flow
+
+Seed `client_id`, `client_secret`, and `callback_url` on an app to emulate the install link with user authorization during installation:
+
+- `GET /apps/<slug>/installations/new?state=<value>` shows a seeded user picker, then lets you pick the user's account or one of their orgs.
+- Installing on the personal account or an org the user owns creates the installation. Installing again reuses it.
+- The emulator then redirects to `callback_url` with `code`, `installation_id`, `setup_action`, and the original `state`. `setup_action` is `install` for a new installation and `update` for an existing one. An `update` carries no `code` once the user has authorized the app.
+- A plain org member gets `setup_action=request` with a `code` and no `installation_id`, and no installation is created.
+- Tests can skip the pages with `POST /apps/<slug>/installations/new` and form fields `login`, `account`, and `state`.
+
+`POST /login/oauth/access_token` with the app's `client_id` and `client_secret` exchanges the code for a user access token. The response has a `ghu_` access token that expires in 8 hours and a `ghr_` refresh token. The app's credentials are always checked, even when no `oauth_apps` are seeded, and the app's codes cannot be exchanged with other client credentials. `grant_type=refresh_token` rotates the pair, and a used refresh token is rejected. `/login/oauth/authorize` also accepts the app's `client_id`.
+
+`GET /user/installations` lists installations on the user's account and on the orgs they belong to, paginated with `page`, `per_page`, and a `Link` header. With a `ghu_` token it lists only that app's installations.
+
 ## Pointing Your App at the Emulator
 
 ### Environment Variable
@@ -119,12 +138,12 @@ GITHUB_EMULATOR_URL=http://localhost:4001
 ### Octokit
 
 ```typescript
-import { Octokit } from '@octokit/rest'
+import { Octokit } from "@octokit/rest";
 
 const octokit = new Octokit({
-  baseUrl: process.env.GITHUB_EMULATOR_URL ?? 'https://api.github.com',
-  auth: 'test_token_admin',
-})
+  baseUrl: process.env.GITHUB_EMULATOR_URL ?? "https://api.github.com",
+  auth: "test_token_admin",
+});
 ```
 
 ### Device flow
@@ -133,16 +152,16 @@ const octokit = new Octokit({
 
 ### OAuth URL Mapping
 
-| Real GitHub URL | Emulator URL |
-|-----------------|-------------|
-| `https://github.com/login/oauth/authorize` | `$GITHUB_EMULATOR_URL/login/oauth/authorize` |
+| Real GitHub URL                               | Emulator URL                                    |
+| --------------------------------------------- | ----------------------------------------------- |
+| `https://github.com/login/oauth/authorize`    | `$GITHUB_EMULATOR_URL/login/oauth/authorize`    |
 | `https://github.com/login/oauth/access_token` | `$GITHUB_EMULATOR_URL/login/oauth/access_token` |
-| `https://api.github.com/user` | `$GITHUB_EMULATOR_URL/user` |
+| `https://api.github.com/user`                 | `$GITHUB_EMULATOR_URL/user`                     |
 
 ### Auth.js / NextAuth.js
 
 ```typescript
-import GitHub from '@auth/core/providers/github'
+import GitHub from "@auth/core/providers/github";
 
 GitHub({
   clientId: process.env.GITHUB_CLIENT_ID,
@@ -156,7 +175,7 @@ GitHub({
   userinfo: {
     url: `${process.env.GITHUB_EMULATOR_URL}/user`,
   },
-})
+});
 ```
 
 ## Seed Config
