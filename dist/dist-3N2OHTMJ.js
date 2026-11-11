@@ -9,6 +9,7 @@ import { dirname, join } from "path";
 import { timingSafeEqual } from "crypto";
 import { createHash } from "crypto";
 import { randomBytes as randomBytes2 } from "crypto";
+import { randomBytes as randomBytes4 } from "crypto";
 import { randomBytes as randomBytes3 } from "crypto";
 function getGitHubStore(store) {
   return {
@@ -7864,11 +7865,11 @@ function orgsAndTeamsRoutes({ app, store, baseUrl }) {
       gh.teamMembers.insert({ team_id: membersTeam.id, user_id: user.id, role: teamRole });
     }
     syncTeamMemberCount(gh, membersTeam.id);
-    const orgRole = orgRoleForUser(gh, org.id, user.id);
+    const orgRole2 = orgRoleForUser(gh, org.id, user.id);
     return c.json({
       url: orgMembershipUrl(baseUrl, org.login, user.login),
       state: "active",
-      role: orgRole,
+      role: orgRole2,
       organization_url: `${baseUrl}/orgs/${org.login}`,
       user: formatUser(user, baseUrl),
       organization: formatOrgBrief(org, baseUrl)
@@ -11297,6 +11298,24 @@ function getPendingCodeIfValid(store, code) {
   return pending;
 }
 var SERVICE_LABEL = "GitHub";
+var APP_USER_TOKEN_TTL_S = 8 * 60 * 60;
+var APP_REFRESH_TOKEN_TTL_S = 184 * 24 * 60 * 60;
+function getAppRefreshTokens(store) {
+  let map = store.getData("github.oauth.appRefreshTokens");
+  if (!map) {
+    map = /* @__PURE__ */ new Map();
+    store.setData("github.oauth.appRefreshTokens", map);
+  }
+  return map;
+}
+function getAppAuthorizedLogins(store) {
+  let map = store.getData("github.oauth.appAuthorizedLogins");
+  if (!map) {
+    map = /* @__PURE__ */ new Map();
+    store.setData("github.oauth.appAuthorizedLogins", map);
+  }
+  return map;
+}
 var DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 var DEVICE_CODE_TTL_S = 900;
 function getDeviceCodes(store) {
@@ -11327,14 +11346,69 @@ function oauthRoutes({ app, store, baseUrl, tokenMap }) {
     }
     return null;
   }
+  function issueAppUserToken(c, clientId, user) {
+    const accessToken = "ghu_" + randomBytes2(27).toString("base64url");
+    const refreshToken = "ghr_" + randomBytes2(57).toString("base64url");
+    tokenMap?.set(accessToken, { login: user.login, id: user.id, scopes: [] });
+    getTokenToClientId(store).set(accessToken, clientId);
+    getAppRefreshTokens(store).set(refreshToken, {
+      login: user.login,
+      clientId,
+      expiresAt: Date.now() + APP_REFRESH_TOKEN_TTL_S * 1e3
+    });
+    const authorized = getAppAuthorizedLogins(store);
+    authorized.set(clientId, (authorized.get(clientId) ?? /* @__PURE__ */ new Set()).add(user.login));
+    const result = {
+      access_token: accessToken,
+      expires_in: APP_USER_TOKEN_TTL_S,
+      refresh_token: refreshToken,
+      refresh_token_expires_in: APP_REFRESH_TOKEN_TTL_S,
+      token_type: "bearer",
+      scope: ""
+    };
+    if ((c.req.header("Accept") ?? "").includes("application/x-www-form-urlencoded")) {
+      c.header("Content-Type", "application/x-www-form-urlencoded");
+      return c.body(
+        new URLSearchParams(Object.fromEntries(Object.entries(result).map(([k, v]) => [k, String(v)]))).toString(),
+        200
+      );
+    }
+    return c.json(result);
+  }
+  function refreshAppUserToken(c, clientId, refreshToken) {
+    const refreshTokens = getAppRefreshTokens(store);
+    const record = refreshTokens.get(refreshToken);
+    refreshTokens.delete(refreshToken);
+    const user = record ? gh.users.findOneBy("login", record.login) : void 0;
+    if (!record || record.clientId !== clientId || record.expiresAt <= Date.now() || !user) {
+      return c.json({
+        error: "bad_refresh_token",
+        error_description: "The refresh token passed is incorrect or expired."
+      });
+    }
+    return issueAppUserToken(c, clientId, user);
+  }
   app.get("/login/oauth/authorize", (c) => {
     const client_id = c.req.query("client_id") ?? "";
     const redirect_uri = c.req.query("redirect_uri") ?? "";
     const scope = c.req.query("scope") ?? "";
     const state = c.req.query("state") ?? "";
+    const githubApp = client_id ? gh.apps.findOneBy("client_id", client_id) : void 0;
     const oauthAppsConfigured = gh.oauthApps.all().length > 0;
     let oauthAppForSubtitle;
-    if (oauthAppsConfigured) {
+    if (githubApp) {
+      if (redirect_uri && githubApp.callback_url && !matchesRedirectUri(redirect_uri, [githubApp.callback_url])) {
+        return c.html(
+          renderErrorPage(
+            "Redirect URI mismatch",
+            "The redirect_uri is not the callback URL of this GitHub App.",
+            SERVICE_LABEL
+          ),
+          400
+        );
+      }
+      oauthAppForSubtitle = githubApp;
+    } else if (oauthAppsConfigured) {
       const oauthApp = gh.oauthApps.findOneBy("client_id", client_id);
       if (!oauthApp) {
         return c.html(
@@ -11383,10 +11457,10 @@ function oauthRoutes({ app, store, baseUrl, tokenMap }) {
   app.post("/login/oauth/callback", async (c) => {
     const body = await c.req.parseBody();
     const login = String(body.login ?? "");
-    const redirect_uri = String(body.redirect_uri ?? "");
     const scope = String(body.scope ?? "");
     const state = String(body.state ?? "");
     const client_id = String(body.client_id ?? "");
+    const redirect_uri = String(body.redirect_uri ?? "") || (client_id ? gh.apps.findOneBy("client_id", client_id)?.callback_url : "") || "";
     const code = randomBytes2(20).toString("hex");
     getPendingCodes(store).set(code, {
       login,
@@ -11521,8 +11595,17 @@ function oauthRoutes({ app, store, baseUrl, tokenMap }) {
         200
       );
     };
+    const githubApp = bodyClientId ? gh.apps.findOneBy("client_id", bodyClientId) : void 0;
     const oauthAppsConfigured = gh.oauthApps.all().length > 0;
-    if (oauthAppsConfigured) {
+    if (githubApp) {
+      if (!githubApp.client_secret || !constantTimeSecretEqual(actualSecret, githubApp.client_secret)) {
+        debug("github.oauth", `[OAuth token] REJECTED: GitHub App client_secret mismatch`);
+        return incorrectClientCredentials();
+      }
+      if (raw.grant_type === "refresh_token") {
+        return refreshAppUserToken(c, githubApp.client_id, String(raw.refresh_token ?? ""));
+      }
+    } else if (oauthAppsConfigured) {
       const oauthApp2 = gh.oauthApps.findOneBy("client_id", bodyClientId);
       if (!oauthApp2) {
         debug("github.oauth", `[OAuth token] REJECTED: client_id not found in oauthApps`);
@@ -11570,6 +11653,14 @@ function oauthRoutes({ app, store, baseUrl, tokenMap }) {
         200
       );
     }
+    const codeForGitHubApp = pending.clientId ? Boolean(gh.apps.findOneBy("client_id", pending.clientId)) : false;
+    if ((githubApp || codeForGitHubApp) && pending.clientId !== githubApp?.client_id) {
+      debug("github.oauth", `[OAuth token] REJECTED: code was issued to another client`);
+      return c.json(
+        { error: "bad_verification_code", error_description: "The code passed is incorrect or expired." },
+        200
+      );
+    }
     debug("github.oauth", `[OAuth token] code valid, login=${pending.login}, scope=${pending.scope}`);
     getPendingCodes(store).delete(code);
     const user = gh.users.findOneBy("login", pending.login);
@@ -11580,6 +11671,7 @@ function oauthRoutes({ app, store, baseUrl, tokenMap }) {
         200
       );
     }
+    if (githubApp) return issueAppUserToken(c, githubApp.client_id, user);
     const token = "gho_" + randomBytes2(20).toString("base64url");
     const scopes = pending.scope ? pending.scope.split(/[,\s]+/).filter(Boolean) : ["repo", "user"];
     if (tokenMap) {
@@ -11785,6 +11877,157 @@ function oauthRoutes({ app, store, baseUrl, tokenMap }) {
     return c.redirect("/settings/applications", 302);
   });
 }
+var SERVICE_LABEL2 = "GitHub";
+function orgRole(gh, org, userId) {
+  let role = null;
+  for (const team of gh.teams.findBy("org_id", org.id)) {
+    for (const member of gh.teamMembers.findBy("team_id", team.id)) {
+      if (member.user_id !== userId) continue;
+      if (member.role === "maintainer") return "admin";
+      role = "member";
+    }
+  }
+  return role;
+}
+function orgsForUser2(gh, userId) {
+  return gh.orgs.all().filter((org) => orgRole(gh, org, userId) !== null).sort((a, b) => a.login.localeCompare(b.login));
+}
+function appInstallRoutes({ app, store }) {
+  const gh = getGitHubStore(store);
+  const installPath = (slug) => `/apps/${encodeURIComponent(slug)}/installations/new`;
+  function sessionUser(c) {
+    const sessionId = parseCookies(c.req.header("Cookie") ?? "")["_emu_session"];
+    const login = sessionId ? getSessionMap(store).get(sessionId) : void 0;
+    return login ? gh.users.findOneBy("login", login) : void 0;
+  }
+  function renderUserPicker(ghApp, state) {
+    const users = [...gh.users.all()].sort((a, b) => a.login.localeCompare(b.login));
+    const body = users.length === 0 ? '<p class="empty">No users in the emulator store.</p>' : users.map(
+      (user) => renderUserButton({
+        letter: (user.login[0] ?? "?").toUpperCase(),
+        login: user.login,
+        name: user.name ?? void 0,
+        email: user.email ?? void 0,
+        formAction: installPath(ghApp.slug),
+        hiddenFields: { login: user.login, state }
+      })
+    ).join("\n");
+    return renderCardPage(`Install ${ghApp.name}`, "Choose a seeded user to sign in as.", body, SERVICE_LABEL2);
+  }
+  function renderAccountPicker(ghApp, user, state) {
+    const accounts = [
+      { login: user.login, label: "Personal account" },
+      ...orgsForUser2(gh, user.id).map((org) => ({
+        login: org.login,
+        label: orgRole(gh, org, user.id) === "admin" ? "Organization (owner)" : "Organization (member, requests approval)"
+      }))
+    ];
+    const body = accounts.map(
+      (account) => renderUserButton({
+        letter: (account.login[0] ?? "?").toUpperCase(),
+        login: account.login,
+        name: account.label,
+        formAction: installPath(ghApp.slug),
+        hiddenFields: { login: user.login, account: account.login, state }
+      })
+    ).join("\n");
+    return renderCardPage(
+      `Install ${ghApp.name}`,
+      `Signed in as <strong>${escapeHtml(user.login)}</strong>. Where do you want to install ${escapeHtml(ghApp.name)}?`,
+      body,
+      SERVICE_LABEL2
+    );
+  }
+  function findOrCreateInstallation(ghApp, account, type) {
+    const existing = gh.appInstallations.findBy("app_id", ghApp.app_id).find((inst) => inst.account_id === account.id && inst.account_type === type);
+    if (existing) return { installation: existing, created: false };
+    const nextId = Math.max(0, ...gh.appInstallations.all().map((inst) => inst.installation_id)) + 1;
+    const installation = gh.appInstallations.insert({
+      installation_id: nextId,
+      app_id: ghApp.app_id,
+      account_type: type,
+      account_id: account.id,
+      account_login: account.login,
+      repository_selection: "all",
+      repository_ids: [],
+      permissions: ghApp.permissions,
+      events: ghApp.events,
+      suspended_at: null
+    });
+    return { installation, created: true };
+  }
+  function mintCode(ghApp, login) {
+    if (!ghApp.client_id || !ghApp.callback_url) return void 0;
+    const code = randomBytes3(20).toString("hex");
+    getPendingCodes(store).set(code, {
+      login,
+      scope: "",
+      redirectUri: ghApp.callback_url,
+      clientId: ghApp.client_id,
+      created_at: Date.now()
+    });
+    return code;
+  }
+  app.get("/apps/:slug/installations/new", (c) => {
+    const ghApp = gh.apps.findOneBy("slug", c.req.param("slug"));
+    if (!ghApp) return c.html(renderErrorPage("Not Found", "No GitHub App has this slug.", SERVICE_LABEL2), 404);
+    const state = c.req.query("state") ?? "";
+    const user = sessionUser(c);
+    return c.html(user ? renderAccountPicker(ghApp, user, state) : renderUserPicker(ghApp, state));
+  });
+  app.post("/apps/:slug/installations/new", async (c) => {
+    const ghApp = gh.apps.findOneBy("slug", c.req.param("slug"));
+    if (!ghApp) return c.html(renderErrorPage("Not Found", "No GitHub App has this slug.", SERVICE_LABEL2), 404);
+    const body = await c.req.parseBody();
+    const state = String(body.state ?? "");
+    const user = gh.users.findOneBy("login", String(body.login ?? ""));
+    if (!user) return c.html(renderErrorPage("User not found", "Pick a seeded user.", SERVICE_LABEL2), 400);
+    const sessionId = randomBytes3(24).toString("base64url");
+    getSessionMap(store).set(sessionId, user.login);
+    c.header("Set-Cookie", `_emu_session=${sessionId}; Path=/; HttpOnly; SameSite=Lax`);
+    const accountLogin = String(body.account ?? "");
+    if (!accountLogin) return c.html(renderAccountPicker(ghApp, user, state));
+    let setupAction;
+    let installationId;
+    if (accountLogin === user.login) {
+      const { installation, created } = findOrCreateInstallation(ghApp, user, "User");
+      setupAction = created ? "install" : "update";
+      installationId = installation.installation_id;
+    } else {
+      const org = gh.orgs.findOneBy("login", accountLogin);
+      const role = org ? orgRole(gh, org, user.id) : null;
+      if (!org || !role) {
+        return c.html(
+          renderErrorPage(
+            "Account not available",
+            `${user.login} cannot install apps on ${accountLogin}.`,
+            SERVICE_LABEL2
+          ),
+          403
+        );
+      }
+      if (role === "admin") {
+        const { installation, created } = findOrCreateInstallation(ghApp, org, "Organization");
+        setupAction = created ? "install" : "update";
+        installationId = installation.installation_id;
+      } else {
+        setupAction = "request";
+      }
+    }
+    if (!ghApp.callback_url) {
+      const done = setupAction === "request" ? `Requested ${escapeHtml(ghApp.name)} on ${escapeHtml(accountLogin)}. An organization owner must approve it.` : `Installed ${escapeHtml(ghApp.name)} on ${escapeHtml(accountLogin)} (installation ${installationId}).`;
+      return c.html(renderCardPage("Installation complete", done, "", SERVICE_LABEL2));
+    }
+    const alreadyAuthorized = ghApp.client_id ? getAppAuthorizedLogins(store).get(ghApp.client_id)?.has(user.login) ?? false : false;
+    const code = setupAction === "update" && alreadyAuthorized ? void 0 : mintCode(ghApp, user.login);
+    const target = new URL(ghApp.callback_url);
+    if (code) target.searchParams.set("code", code);
+    if (installationId !== void 0) target.searchParams.set("installation_id", String(installationId));
+    target.searchParams.set("setup_action", setupAction);
+    if (state) target.searchParams.set("state", state);
+    return c.redirect(target.toString(), 302);
+  });
+}
 function appsRoutes({ app, store, baseUrl, tokenMap }) {
   const gh = getGitHubStore(store);
   function requireApp(c) {
@@ -11920,7 +12163,7 @@ function appsRoutes({ app, store, baseUrl, tokenMap }) {
     if (unavailableRepo) {
       return c.json({ message: "The repositories requested are not accessible to this installation." }, 422);
     }
-    const token = "ghs_" + randomBytes3(20).toString("base64url");
+    const token = "ghs_" + randomBytes4(20).toString("base64url");
     const issuedAt = (/* @__PURE__ */ new Date()).toISOString();
     const expiresAt = new Date(Date.parse(issuedAt) + 60 * 60 * 1e3).toISOString();
     getGitHubStore(store).installationTokenMetadata.insert({
@@ -12016,6 +12259,29 @@ function appsRoutes({ app, store, baseUrl, tokenMap }) {
     }
     const ghApp = gh.apps.all().find((a) => a.app_id === inst.app_id);
     return c.json(formatInstallation(inst, ghApp, baseUrl));
+  });
+  app.get("/user/installations", (c) => {
+    const authUser = c.get("authUser");
+    const user = authUser ? gh.users.findOneBy("login", authUser.login) : void 0;
+    if (!user) throw unauthorized();
+    const token = c.get("authToken");
+    const tokenClientId = token ? getTokenToClientId(store).get(token) : void 0;
+    const tokenApp = tokenClientId ? gh.apps.findOneBy("client_id", tokenClientId) : void 0;
+    const orgIds = new Set(orgsForUser2(gh, user.id).map((org) => org.id));
+    const accessible = gh.appInstallations.all().filter((inst) => !tokenApp || inst.app_id === tokenApp.app_id).filter((inst) => inst.account_type === "User" ? inst.account_id === user.id : orgIds.has(inst.account_id)).sort((a, b) => a.installation_id - b.installation_id);
+    const { page, per_page } = parsePagination(c);
+    setLinkHeader(c, accessible.length, page, per_page);
+    const pageItems = accessible.slice((page - 1) * per_page, page * per_page);
+    return c.json({
+      total_count: accessible.length,
+      installations: pageItems.map(
+        (inst) => formatInstallation(
+          inst,
+          gh.apps.all().find((a) => a.app_id === inst.app_id),
+          baseUrl
+        )
+      )
+    });
   });
   function formatInstallation(inst, ghApp, baseUrl2) {
     const account = inst.account_type === "Organization" ? gh.orgs.get(inst.account_id) : gh.users.get(inst.account_id);
@@ -12423,6 +12689,9 @@ ${r.description}
     for (const a of config.apps) {
       const existingApp = gh.apps.findOneBy("slug", a.slug);
       if (existingApp) continue;
+      if (a.client_id && !a.client_secret) {
+        throw new Error(`GitHub App "${a.slug}" sets client_id without client_secret`);
+      }
       const privateKey = a.private_key;
       if (!privateKey) {
         throw new Error(`GitHub App "${a.slug}" requires private_key`);
@@ -12436,7 +12705,10 @@ ${r.description}
         events: a.events ?? [],
         webhook_url: a.webhook_url ?? null,
         webhook_secret: a.webhook_secret ?? null,
-        description: a.description ?? null
+        description: a.description ?? null,
+        client_id: a.client_id ?? null,
+        client_secret: a.client_secret ?? null,
+        callback_url: a.callback_url ?? null
       });
       if (a.installations) {
         for (const inst of a.installations) {
@@ -12556,6 +12828,7 @@ var githubPlugin = {
     metaRoutes(ctx);
     oauthRoutes(ctx);
     appsRoutes(ctx);
+    appInstallRoutes(ctx);
     installationTokenRoutes(ctx);
     contentsRoutes(ctx);
     commitsRoutes(ctx);
@@ -12581,4 +12854,4 @@ export {
  * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
  * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
  */
-//# sourceMappingURL=dist-X4UHL5GD.js.map
+//# sourceMappingURL=dist-3N2OHTMJ.js.map

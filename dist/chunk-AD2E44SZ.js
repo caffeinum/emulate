@@ -12,7 +12,7 @@ import {
   publishGeneratedSecretsFile,
   registerAliases,
   removeAliases
-} from "./chunk-3E4EWOX3.js";
+} from "./chunk-6CWM626Q.js";
 
 // src/program.ts
 import { Command } from "commander";
@@ -832,6 +832,9 @@ GitHub API coverage:
   Suites are separated by App and commit; latest runs are grouped by App and check name.
   User-token checks return app: null; request-body app_id cannot change attribution.
   Inspect minted installation-token metadata at GET /_emulate/installation-tokens.
+  Apps seeded with client_id, client_secret, and callback_url serve /apps/<slug>/installations/new?state=...
+  It redirects to callback_url with code, installation_id, setup_action (install, update, request), and state.
+  The code exchanges for an expiring ghu_ token with a ghr_ refresh token; GET /user/installations lists installs.
 
 Linear API coverage:
   Issue queries and mutations include numeric priority and derived priorityLabel fields.
@@ -972,4 +975,4 @@ function parsePort(value) {
 export {
   createProgram
 };
-//# sourceMappingURL=chunk-6FFCK7DU.js.map
+//# sourceMappingURL=chunk-AD2E44SZ.js.map
