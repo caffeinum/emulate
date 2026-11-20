@@ -1,6 +1,6 @@
 {
   "name": "emulate",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Local drop-in replacement services for CI and no-network sandboxes",
   "license": "Apache-2.0",
   "type": "module",
@@ -27,5 +27,5 @@
     "ws": "^8.22.0",
     "yaml": "^2"
   },
-  "emulateSourceSha": "fac99799c9703181c34912eb3654ab03288078be"
+  "emulateSourceSha": "a9b54b07b5edbf03e3174e6fe844b5a4c0175b28"
 }

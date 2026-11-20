@@ -1,9 +1,3 @@
-/*!
- * This HTTP compatibility layer builds on Hono's API and design.
- * https://github.com/honojs/hono
- * Copyright (c) 2021 - present, Yusuke Wada and Hono contributors
- * MIT license: see THIRD_PARTY_NOTICES.md in the repository and npm packages.
- */
 import { Server } from "node:http";
 type BodyInit = ConstructorParameters<typeof Response>[0];
 type HeadersInit = ConstructorParameters<typeof Headers>[0];
@@ -248,7 +242,7 @@ export declare function defineConfig<Definitions extends Record<string, Emulator
   prepare?: string;
   cleanup?: string;
 }): typeof config;
-declare const SERVICE_NAME_LIST: readonly ["vercel", "github", "google", "slack", "apple", "microsoft", "okta", "aws", "resend", "stripe", "mongoatlas", "clerk", "linear", "twilio", "telegram", "workos"];
+declare const SERVICE_NAME_LIST: readonly ["vercel", "github", "google", "slack", "apple", "microsoft", "okta", "aws", "resend", "stripe", "mongoatlas", "clerk", "linear", "twilio", "ai", "telegram", "workos"];
 type ServiceName = (typeof SERVICE_NAME_LIST)[number];
 export interface SeedConfig {
   tokens?: Record<string, {

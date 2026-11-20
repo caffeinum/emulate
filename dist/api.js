@@ -4,6 +4,8 @@ import {
 import "./chunk-PZ5AY32C.js";
 
 // ../@emulators/core/dist/index.js
+import { lookup } from "dns/promises";
+import { connect, isIP } from "net";
 import { createServer as createNodeServer } from "http";
 import { createHmac } from "crypto";
 import { createPublicKey } from "crypto";
@@ -369,6 +371,23 @@ function mergeHeaders(target, operations) {
     else target.set(name, value);
   }
 }
+function carriedStatus(err) {
+  if (err && typeof err === "object" && "status" in err) {
+    const s = err.status;
+    if (typeof s === "number" && Number.isInteger(s) && s >= 400 && s <= 599) return s;
+  }
+  return void 0;
+}
+function errorStatus(err) {
+  return carriedStatus(err) ?? 500;
+}
+function renderApiError(err, c) {
+  const message = err instanceof Error ? err.message : "Internal Server Error";
+  return c.json(
+    { message, documentation_url: c.get("docsUrl") ?? "https://emulate.dev" },
+    errorStatus(err)
+  );
+}
 var Hono = class {
   constructor(options = {}) {
     this.options = options;
@@ -382,7 +401,8 @@ var Hono = class {
   }
   middleware = [];
   routes = [];
-  errorHandler = (err) => {
+  errorHandler = (err, c) => {
+    if (carriedStatus(err) !== void 0) return renderApiError(err, c);
     const message = err instanceof Error ? err.message : "Internal Server Error";
     return new Response(message, { status: 500 });
   };
@@ -519,51 +539,102 @@ function cors(options = {}) {
 function serve(options) {
   const port = options.port ?? 3e3;
   const server = createNodeServer(async (req, res) => {
+    const controller = options.abortOnClose ? new AbortController() : void 0;
+    const onClose = () => {
+      if (!res.writableFinished) controller?.abort();
+    };
+    if (controller) res.once("close", onClose);
     try {
-      const request = nodeRequestToFetchRequest(req);
+      const request = nodeRequestToFetchRequest(req, controller?.signal);
       const response = await options.fetch(request);
-      await writeFetchResponse(res, response, req.method?.toUpperCase() === "HEAD");
+      await writeFetchResponse(res, response, req.method?.toUpperCase() === "HEAD", controller?.signal);
     } catch (err) {
+      if (controller?.signal.aborted) {
+        res.destroy();
+        return;
+      }
       const message = err instanceof Error ? err.message : "Internal Server Error";
-      res.statusCode = 500;
+      res.statusCode = err instanceof InvalidHostError ? 400 : 500;
       res.setHeader("Content-Type", "text/plain; charset=UTF-8");
       res.end(message);
+    } finally {
+      if (controller) {
+        if (!res.writableEnded) controller.abort();
+        res.off("close", onClose);
+      }
     }
   });
   server.listen(port, options.hostname ?? "127.0.0.1");
   return server;
 }
+async function assertPortFree(hostname, port) {
+  const host = hostname ?? "127.0.0.1";
+  if (port === 0 || host === "0.0.0.0" || host === "::") return;
+  const address = isIP(host) ? host : await lookup(host).then(
+    (r) => r.address,
+    () => void 0
+  );
+  if (!address) return;
+  const taken = await new Promise((resolve) => {
+    try {
+      const socket = connect({ host: address, port, timeout: 300 });
+      const settle = (value) => {
+        socket.destroy();
+        resolve(value);
+      };
+      socket.once("connect", () => settle(true));
+      socket.once("timeout", () => settle(false));
+      socket.once("error", () => settle(false));
+    } catch {
+      resolve(false);
+    }
+  });
+  if (!taken) return;
+  throw Object.assign(new Error(`listen EADDRINUSE: address already in use ${address}:${port}`), {
+    code: "EADDRINUSE",
+    errno: -48,
+    syscall: "listen",
+    address,
+    port
+  });
+}
 function compilePath(pattern) {
   if (pattern === "*" || pattern === "/*") {
     return { pattern, regex: /^.*$/, paramNames: [] };
   }
+  const prefix = pattern.endsWith("/*");
+  const body = prefix ? pattern.slice(0, -2) : pattern;
   const paramNames = [];
   let source = "^";
-  for (let i = 0; i < pattern.length; i++) {
-    const char = pattern[i];
+  for (let i = 0; i < body.length; i++) {
+    const char = body[i];
+    if (char === "*" && body[i - 1] === "/" && (i + 1 === body.length || body[i + 1] === "/")) {
+      source += "[^/]+";
+      continue;
+    }
     if (char !== ":") {
       source += escapeRegex(char);
       continue;
     }
     let name = "";
     i++;
-    while (i < pattern.length && /[A-Za-z0-9_]/.test(pattern[i])) {
-      name += pattern[i];
+    while (i < body.length && /[A-Za-z0-9_]/.test(body[i])) {
+      name += body[i];
       i++;
     }
     i--;
     paramNames.push(name);
-    if (pattern[i + 1] === "{") {
-      const close = pattern.indexOf("}", i + 2);
+    if (body[i + 1] === "{") {
+      const close = body.indexOf("}", i + 2);
       if (close < 0) throw new Error(`Invalid route pattern: ${pattern}`);
-      const expr = pattern.slice(i + 2, close);
+      const expr = body.slice(i + 2, close);
       source += `(${expr})`;
       i = close;
     } else {
       source += "([^/]+)";
     }
   }
-  source += "$";
+  source += prefix ? "(?:/.*)?$" : "$";
   return { pattern, regex: new RegExp(source), paramNames };
 }
 function matchPath(compiled, path) {
@@ -609,8 +680,22 @@ function appendBodyValue(target, key, value) {
     target[key] = [existing, value];
   }
 }
-function nodeRequestToFetchRequest(req) {
-  const host = req.headers.host ?? "localhost";
+var InvalidHostError = class extends Error {
+  constructor() {
+    super("Invalid Host header");
+  }
+};
+function hostAuthority(host) {
+  if (/[\s/?#@\\]/.test(host)) throw new InvalidHostError();
+  try {
+    new URL(`http://${host}`);
+  } catch {
+    throw new InvalidHostError();
+  }
+  return host;
+}
+function nodeRequestToFetchRequest(req, signal) {
+  const host = hostAuthority(req.headers.host ?? "localhost");
   const url = new URL(req.url ?? "/", `http://${host}`);
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
@@ -627,10 +712,11 @@ function nodeRequestToFetchRequest(req) {
     method,
     headers,
     body: hasBody ? req : void 0,
+    signal,
     duplex: "half"
   });
 }
-async function writeFetchResponse(res, response, headOnly) {
+async function writeFetchResponse(res, response, headOnly, signal) {
   res.statusCode = response.status;
   res.statusMessage = response.statusText;
   const headersWithCookies = response.headers;
@@ -647,18 +733,66 @@ async function writeFetchResponse(res, response, headOnly) {
     return;
   }
   const reader = response.body.getReader();
+  let aborted = signal?.aborted === true;
+  if (aborted) void reader.cancel().catch(() => {
+  });
+  const onAbort = () => {
+    aborted = true;
+    void reader.cancel().catch(() => {
+    });
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
   try {
-    while (true) {
+    while (!aborted) {
       const { done, value } = await reader.read();
       if (done) break;
-      if (!res.write(value)) {
-        await new Promise((resolve) => res.once("drain", resolve));
-      }
+      if (aborted) break;
+      const pending = writeChunk(res, value, signal);
+      if (pending) await pending;
+    }
+    if (aborted) {
+      res.destroy();
+      return;
     }
     res.end();
   } catch (err) {
-    res.destroy(err instanceof Error ? err : void 0);
+    void reader.cancel().catch(() => {
+    });
+    destroyAfterFlush(res, err instanceof Error ? err : void 0);
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
   }
+}
+function destroyAfterFlush(res, err) {
+  if (res.destroyed) return;
+  res.write("", () => res.destroy(err));
+}
+function writeChunk(res, chunk, signal) {
+  if (signal?.aborted) return void 0;
+  if (res.destroyed) throw new Error("Response closed before write");
+  if (res.write(chunk)) return void 0;
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      res.off("drain", onDrain);
+      res.off("close", onClose);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    const onDrain = () => {
+      cleanup();
+      resolve();
+    };
+    const onClose = () => {
+      cleanup();
+      reject(new Error("Response closed before drain"));
+    };
+    const onAbort = () => {
+      cleanup();
+      resolve();
+    };
+    res.once("drain", onDrain);
+    res.once("close", onClose);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 var MAX_DELIVERIES = 1e3;
 function githubHeaders({ event, body, subscription, deliveryId }) {
@@ -796,31 +930,12 @@ var WebhookDispatcher = class {
     this.deliveryIdCounter = 1;
   }
 };
-var DEFAULT_DOCS_URL = "https://emulate.dev";
-function getDocsUrl(c) {
-  return c.get("docsUrl") ?? DEFAULT_DOCS_URL;
-}
-function errorStatus(err) {
-  if (err && typeof err === "object" && "status" in err) {
-    const s = err.status;
-    if (typeof s === "number" && Number.isFinite(s)) return s;
-  }
-  return 500;
-}
 function createApiErrorHandler(documentationUrl) {
   return (err, c) => {
     if (documentationUrl) {
       c.set("docsUrl", documentationUrl);
     }
-    const status = errorStatus(err);
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return c.json(
-      {
-        message,
-        documentation_url: getDocsUrl(c)
-      },
-      status
-    );
+    return renderApiError(err, c);
   };
 }
 function createErrorHandler(documentationUrl) {
@@ -832,10 +947,41 @@ function createErrorHandler(documentationUrl) {
   };
 }
 var errorHandler = createErrorHandler();
+var ApiError = class extends Error {
+  constructor(status, message, errors) {
+    super(message);
+    this.status = status;
+    this.errors = errors;
+    this.name = "ApiError";
+  }
+};
+function notFound(resource) {
+  return new ApiError(404, resource ? `${resource} not found` : "Not Found");
+}
 var isDebug = typeof process !== "undefined" && (process.env.DEBUG === "1" || process.env.DEBUG === "true" || process.env.EMULATE_DEBUG === "1");
 function debug(label, ...args) {
   if (isDebug) {
     console.log(`[${label}]`, ...args);
+  }
+}
+function serializeTokenMap(tokenMap) {
+  return [...tokenMap.entries()].map(([token, user]) => ({
+    token,
+    login: user.login,
+    id: user.id,
+    scopes: user.scopes,
+    ...user.installation ? { installation: user.installation } : {}
+  }));
+}
+function restoreTokenMap(tokenMap, tokens) {
+  tokenMap.clear();
+  for (const t of tokens) {
+    tokenMap.set(t.token, {
+      login: t.login,
+      id: t.id,
+      scopes: t.scopes,
+      ...t.installation ? { installation: t.installation } : {}
+    });
   }
 }
 function authMiddleware(tokens, appKeyResolver, fallbackUser) {
@@ -924,43 +1070,48 @@ function createServer(plugin, options = {}) {
   }
   const docsUrl = options.docsUrl ?? `https://emulate.dev/${plugin.name}`;
   registerFontRoutes(app);
-  app.onError(createApiErrorHandler(docsUrl));
+  const defaultErrorHandler = createApiErrorHandler(docsUrl);
+  const renderError = async (err, c) => {
+    if (!plugin.formatError) return defaultErrorHandler(err, c);
+    try {
+      const response = await plugin.formatError(err, c, errorStatus(err));
+      if (response instanceof Response) return response;
+    } catch {
+    }
+    return defaultErrorHandler(err, c);
+  };
+  app.onError(renderError);
   app.use("*", cors());
   app.use("*", createErrorHandler(docsUrl));
   app.use("*", authMiddleware(tokenMap, options.appKeyResolver, options.fallbackUser));
-  const rateLimitCounters = /* @__PURE__ */ new Map();
-  let lastPruneAt = Math.floor(Date.now() / 1e3);
-  app.use("*", async (c, next) => {
-    if (plugin.rateLimit === false) return next();
-    const token = c.get("authToken") ?? "__anonymous__";
-    const now = Math.floor(Date.now() / 1e3);
-    if (now - lastPruneAt > 3600) {
-      for (const [key, val] of rateLimitCounters) {
-        if (val.resetAt <= now) rateLimitCounters.delete(key);
+  if (plugin.rateLimit !== false) {
+    const rateLimitCounters = /* @__PURE__ */ new Map();
+    let lastPruneAt = Math.floor(Date.now() / 1e3);
+    app.use("*", async (c, next) => {
+      const token = c.get("authToken") ?? "__anonymous__";
+      const now = Math.floor(Date.now() / 1e3);
+      if (now - lastPruneAt > 3600) {
+        for (const [key, val] of rateLimitCounters) {
+          if (val.resetAt <= now) rateLimitCounters.delete(key);
+        }
+        lastPruneAt = now;
       }
-      lastPruneAt = now;
-    }
-    let counter = rateLimitCounters.get(token);
-    if (!counter || counter.resetAt <= now) {
-      counter = { remaining: 5e3, resetAt: now + 3600 };
-      rateLimitCounters.set(token, counter);
-    }
-    counter.remaining = Math.max(0, counter.remaining - 1);
-    c.header("X-RateLimit-Limit", "5000");
-    c.header("X-RateLimit-Remaining", String(counter.remaining));
-    c.header("X-RateLimit-Reset", String(counter.resetAt));
-    c.header("X-RateLimit-Resource", "core");
-    if (counter.remaining === 0) {
-      return c.json(
-        {
-          message: "API rate limit exceeded",
-          documentation_url: docsUrl
-        },
-        403
-      );
-    }
-    await next();
-  });
+      let counter = rateLimitCounters.get(token);
+      if (!counter || counter.resetAt <= now) {
+        counter = { remaining: 5e3, resetAt: now + 3600 };
+        rateLimitCounters.set(token, counter);
+      }
+      counter.remaining = Math.max(0, counter.remaining - 1);
+      c.header("X-RateLimit-Limit", "5000");
+      c.header("X-RateLimit-Remaining", String(counter.remaining));
+      c.header("X-RateLimit-Reset", String(counter.resetAt));
+      c.header("X-RateLimit-Resource", "core");
+      if (counter.remaining === 0) {
+        return renderError(new ApiError(403, "API rate limit exceeded"), c);
+      }
+      await next();
+    });
+  }
   const requests = [];
   app.get("/_emulate/requests", (c) => c.json(requests));
   app.delete("/_emulate/requests", (c) => {
@@ -985,17 +1136,9 @@ function createServer(plugin, options = {}) {
     if (requests.length > 1e3) requests.shift();
     return response;
   };
-  const close = plugin.register(app, store, webhooks, baseUrl, tokenMap) ?? (async () => {
+  const close = plugin.register(app, store, webhooks, baseUrl, tokenMap, { baseUrlDerived: options.baseUrlDerived }) ?? (async () => {
   });
-  app.notFound(
-    (c) => c.json(
-      {
-        message: "Not Found",
-        documentation_url: docsUrl
-      },
-      404
-    )
-  );
+  app.notFound((c) => renderError(notFound(), c));
   return { app, store, webhooks, port, baseUrl, tokenMap, close };
 }
 function escapeHtml(s) {
@@ -1969,7 +2112,7 @@ var SERVICE_REGISTRY = {
     label: "Vercel REST API emulator",
     endpoints: "projects, deployments, domains, env vars, users, teams, file uploads, protection bypass, blob storage",
     async load() {
-      const mod = await import("./dist-VNICTCXQ.js");
+      const mod = await import("./dist-YME3TFL3.js");
       return { plugin: mod.vercelPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -1996,7 +2139,7 @@ var SERVICE_REGISTRY = {
     label: "GitHub REST API emulator",
     endpoints: "users, repos, issues, PRs, comments, reviews, labels, milestones, branches, git data, orgs, teams, releases, webhooks, search, actions, checks, rate limit",
     async load() {
-      const mod = await import("./dist-3N2OHTMJ.js");
+      const mod = await import("./dist-2CGMHLIQ.js");
       return {
         plugin: mod.githubPlugin,
         seedFromConfig: mod.seedFromConfig,
@@ -2060,7 +2203,7 @@ var SERVICE_REGISTRY = {
     label: "Google OAuth 2.0 / OpenID Connect + Gmail, Calendar, and Drive emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, RS256 OIDC discovery and JWKS, token revocation, Gmail messages/drafts/threads/labels/history/settings, Calendar discovery/lists/events/freebusy, Drive files/uploads",
     async load() {
-      const mod = await import("./dist-5KWACV7T.js");
+      const mod = await import("./dist-MDHRQFSD.js");
       return { plugin: mod.googlePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2142,7 +2285,7 @@ var SERVICE_REGISTRY = {
     label: "Slack API emulator",
     endpoints: "auth, chat, conversations, users, profiles, presence, files, pins, bookmarks, views, reactions, team, OAuth, incoming webhooks, inspector",
     async load() {
-      const mod = await import("./dist-GTOMK3RC.js");
+      const mod = await import("./dist-XM57KHXI.js");
       return { plugin: mod.slackPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2223,7 +2366,7 @@ var SERVICE_REGISTRY = {
     label: "Apple Sign In / OAuth emulator",
     endpoints: "OAuth authorize, token exchange, JWKS",
     async load() {
-      const mod = await import("./dist-3BVF5RIJ.js");
+      const mod = await import("./dist-MSKFTQBL.js");
       return { plugin: mod.applePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2248,7 +2391,7 @@ var SERVICE_REGISTRY = {
     label: "Microsoft Entra ID OAuth 2.0 / OpenID Connect emulator",
     endpoints: "OAuth authorize, token exchange, userinfo, OIDC discovery, Graph /me, logout, token revocation",
     async load() {
-      const mod = await import("./dist-3HERTGTN.js");
+      const mod = await import("./dist-C3TJXX5U.js");
       return { plugin: mod.microsoftPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2273,7 +2416,7 @@ var SERVICE_REGISTRY = {
     label: "Okta OAuth 2.0 / OpenID Connect + management API emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo/introspect/revoke/logout, users, groups, apps, authorization servers",
     async load() {
-      const mod = await import("./dist-IPFROYLJ.js");
+      const mod = await import("./dist-VH6EDCCN.js");
       return { plugin: mod.oktaPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2299,9 +2442,9 @@ var SERVICE_REGISTRY = {
   },
   aws: {
     label: "AWS cloud service emulator",
-    endpoints: "S3 (buckets, objects), SQS (queues, messages), Cognito (User Pools, OAuth, JWTs, Identity Pools), IAM (users, roles, access keys), STS (assume role, caller identity)",
+    endpoints: "S3 (buckets, objects), SQS (queues, messages), Cognito (User Pools, OAuth, JWTs, Identity Pools), IAM (users, roles, access keys), STS (assume role, web identity, caller identity), KMS (keys, encrypt, decrypt)",
     async load() {
-      const mod = await import("./dist-W3PA4APY.js");
+      const mod = await import("./dist-UBKVXCTU.js");
       return { plugin: mod.awsPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2323,7 +2466,7 @@ var SERVICE_REGISTRY = {
     label: "Resend email API emulator",
     endpoints: "emails with idempotency, recipient restrictions, send attempts, domains, contacts, API keys, inbox UI",
     async load() {
-      const mod = await import("./dist-S4NOR2TR.js");
+      const mod = await import("./dist-BI3Q7RNE.js");
       return { plugin: mod.resendPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2340,7 +2483,7 @@ var SERVICE_REGISTRY = {
     label: "Stripe payments emulator",
     endpoints: "customers, payment methods, customer sessions, payment intents, charges, products, prices, checkout sessions, webhooks",
     async load() {
-      const mod = await import("./dist-42BR3AD7.js");
+      const mod = await import("./dist-O6TQREAE.js");
       return { plugin: mod.stripePlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2377,7 +2520,7 @@ var SERVICE_REGISTRY = {
     label: "Clerk authentication and user management emulator",
     endpoints: "OIDC discovery, JWKS, OAuth authorize/token/userinfo, users, email addresses, organizations, memberships, invitations, sessions",
     async load() {
-      const mod = await import("./dist-ZVK4USRC.js");
+      const mod = await import("./dist-ZOK6X7RE.js");
       return { plugin: mod.clerkPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2414,9 +2557,9 @@ var SERVICE_REGISTRY = {
   },
   linear: {
     label: "Linear GraphQL API emulator",
-    endpoints: "GraphQL, OAuth, issues, teams, users, workflow states, comments, labels, projects, cycles, webhooks, agents, inspector",
+    endpoints: "GraphQL, OAuth, issues, teams, users, workflow states, comments, labels, projects, cycles, webhooks, agent sessions and activities, inspector",
     async load() {
-      const mod = await import("./dist-ZE3IXGO2.js");
+      const mod = await import("./dist-BE5DUODX.js");
       return { plugin: mod.linearPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2481,7 +2624,7 @@ var SERVICE_REGISTRY = {
     label: "Twilio API emulator",
     endpoints: "accounts, API keys, phone numbers, Programmable Messaging, Messaging Services, Verify, Voice, webhooks, simulator, inspector",
     async load() {
-      const mod = await import("./dist-FH6AOEWO.js");
+      const mod = await import("./dist-O4SBDULO.js");
       return { plugin: mod.twilioPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback(cfg) {
@@ -2533,11 +2676,36 @@ var SERVICE_REGISTRY = {
       }
     }
   },
+  ai: {
+    label: "AI provider emulator for OpenAI Responses, Chat Completions, and Anthropic Messages",
+    endpoints: "OpenAI Responses, Chat Completions, Anthropic Messages, models list, stored responses, call record, live rules, reset, inspector",
+    async load() {
+      const mod = await import("./dist-GHHDETJZ.js");
+      return { plugin: mod.aiPlugin, seedFromConfig: mod.seedFromConfig };
+    },
+    defaultFallback() {
+      return { login: "ai_test", id: 1, scopes: [] };
+    },
+    initConfig: {
+      ai: {
+        strict: false,
+        timing: { ttftMs: 0, chunkDelayMs: 0 },
+        models: ["gpt-x"],
+        rules: [
+          {
+            id: "greeting",
+            match: { textContains: "hello" },
+            reply: [{ type: "text", text: "Hello from the emulate AI service." }]
+          }
+        ]
+      }
+    }
+  },
   telegram: {
     label: "Telegram Bot API emulator",
     endpoints: "Bot API at /bot<token>/<method> (messages, media, files, webhooks, getUpdates, forum topics, commands, descriptions), control API, inspector",
     async load() {
-      const mod = await import("./dist-ZI4X3S3T.js");
+      const mod = await import("./dist-NT7WDJ2O.js");
       return { plugin: mod.telegramPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2565,7 +2733,7 @@ var SERVICE_REGISTRY = {
     label: "WorkOS API emulator (via @workos/emulate)",
     endpoints: "AuthKit authorize/authenticate, user management, organizations, sessions, JWKS, SSO, API keys",
     async load() {
-      const mod = await import("./dist-JEAAPVMK.js");
+      const mod = await import("./dist-SLWQ3PS2.js");
       return { plugin: mod.workosPlugin, seedFromConfig: mod.seedFromConfig };
     },
     defaultFallback() {
@@ -2581,6 +2749,13 @@ var SERVICE_REGISTRY = {
 };
 
 // src/base-url.ts
+import { isIPv6 } from "net";
+function advertisedHost(hostname) {
+  const host = hostname?.replace(/^\[|\]$/g, "");
+  if (!host || host === "localhost" || host === "0.0.0.0" || host === "::" || host === "::1" || host.startsWith("127."))
+    return "localhost";
+  return isIPv6(host) ? `[${host}]` : host;
+}
 function resolveBaseUrl(opts) {
   if (opts.seedBaseUrl) {
     return opts.seedBaseUrl.replace(/\{service\}/g, opts.service);
@@ -2596,7 +2771,16 @@ function resolveBaseUrl(opts) {
   if (portlessUrl) {
     return portlessUrl.replace(/\{service\}/g, opts.service);
   }
-  return `http://localhost:${opts.port}`;
+  return `http://${advertisedHost(opts.hostname)}:${opts.port}`;
+}
+
+// src/ai-network.ts
+function isLoopbackHost(host) {
+  const normalized = host.replace(/^\[|\]$/g, "").toLowerCase();
+  return normalized === "localhost" || normalized === "::1" || normalized.startsWith("127.");
+}
+function aiNetworkWarning(host) {
+  return `AI control routes are reachable on ${host} without authentication. Use a trusted network.`;
 }
 
 // src/api.ts
@@ -2606,6 +2790,7 @@ async function createEmulator(options) {
   if (opts.listen === false)
     return { ...await createCustomRuntime(opts.service, opts), generatedSecrets: Object.freeze([]) };
   let runtime;
+  await assertPortFree(opts.hostname, opts.port ?? 4e3);
   const server = serve({
     fetch: (request) => runtime ? runtime.fetch(request) : Response.json({ error: "Starting" }, { status: 503 }),
     port: opts.port ?? 4e3,
@@ -2615,7 +2800,12 @@ async function createEmulator(options) {
     await waitForListening(server);
     const address = server.address();
     const port = address && typeof address === "object" ? address.port : opts.port ?? 4e3;
-    const baseUrl = resolveBaseUrl({ service: opts.service.name, port, baseUrl: opts.baseUrl });
+    const baseUrl = resolveBaseUrl({
+      service: opts.service.name,
+      port,
+      baseUrl: opts.baseUrl,
+      hostname: opts.hostname
+    });
     runtime = await createCustomRuntime(opts.service, { ...opts, baseUrl });
     let closing;
     return {
@@ -2672,15 +2862,18 @@ async function createBuiltinEmulator(options) {
   }
   const loaded = await entry.load();
   let handler;
+  await assertPortFree(options.hostname, port);
   const httpServer = serve({
     fetch: (request) => handler ? handler(request) : new Response("Starting", { status: 503 }),
     port,
-    hostname: options.hostname
+    hostname: options.hostname,
+    abortOnClose: loaded.plugin.abortOnClose
   });
   try {
     await waitForListening(httpServer);
     const address = httpServer.address();
     const actualPort = address && typeof address === "object" ? address.port : port;
+    const boundAddress = address && typeof address === "object" ? address.address : void 0;
     const tokens = {};
     if (seedConfig?.tokens) {
       let tokenId = 100;
@@ -2697,7 +2890,13 @@ async function createBuiltinEmulator(options) {
       (preparedSeed?.generatedSecrets ?? []).map((secret) => Object.freeze({ service, ...secret }))
     );
     const seedBaseUrl = typeof svcSeedConfig?.baseUrl === "string" && svcSeedConfig.baseUrl.length > 0 ? svcSeedConfig.baseUrl : void 0;
-    const baseUrl = resolveBaseUrl({ service, port: actualPort, baseUrl: options.baseUrl, seedBaseUrl });
+    const baseUrl = resolveBaseUrl({
+      service,
+      port: actualPort,
+      baseUrl: options.baseUrl,
+      seedBaseUrl,
+      hostname: options.hostname
+    });
     let cachedResolver;
     const appKeyResolver = loaded.createAppKeyResolver ? (appId) => cachedResolver(appId) : void 0;
     const fallbackUser = svcSeedConfig?.strict_tokens === true ? void 0 : entry.defaultFallback(svcSeedConfig);
@@ -2715,6 +2914,7 @@ async function createBuiltinEmulator(options) {
       fallbackUser
     });
     cachedResolver = loaded.createAppKeyResolver?.(store);
+    const startupTokens = structuredClone(serializeTokenMap(tokenMap));
     const seed = () => {
       loaded.plugin.seed?.(store, baseUrl);
       if (svcSeedConfig && loaded.seedFromConfig) {
@@ -2723,14 +2923,15 @@ async function createBuiltinEmulator(options) {
     };
     seed();
     handler = app.fetch;
+    if (service === "ai" && boundAddress !== void 0 && !isLoopbackHost(boundAddress)) {
+      console.warn(`Warning: ${aiNetworkWarning(boundAddress)}`);
+    }
     let closing;
     return {
       url: baseUrl,
       generatedSecrets,
       reset() {
-        for (const [token, user] of tokenMap) {
-          if (user.installation) tokenMap.delete(token);
-        }
+        restoreTokenMap(tokenMap, structuredClone(startupTokens));
         store.reset();
         webhooks.clear();
         seed();
