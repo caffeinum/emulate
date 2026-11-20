@@ -1529,6 +1529,8 @@ env:
 
 `GET /user_management/authorize` redirects straight back with a code: with no `login_hint` it signs in the first seeded user, a `login_hint` matches an email case-insensitively, and an unknown hint redirects with `error=user_not_found`. `POST /user_management/authenticate` handles `authorization_code` and `refresh_token`, access tokens verify against `GET /sso/jwks/:client_id`, and `GET /user_management/sessions/logout` redirects to `return_to`. Token `iss` defaults to this service's URL. A reset starts a fresh instance, so earlier sessions and refresh tokens end. See the [@workos/emulate supported features](https://github.com/workos/emulate/blob/main/SUPPORTED.md) for the full surface.
 
+MCP clients can sign in through the AuthKit OAuth server. `GET /.well-known/oauth-authorization-server` advertises the endpoints, `POST /oauth2/register` registers a client (RFC 7591; `token_endpoint_auth_method: none` makes a public client), and `GET /oauth2/authorize` takes a PKCE S256 challenge and a `resource`, then signs in like `/user_management/authorize`, so no browser is needed. `POST /oauth2/token` checks the `code_verifier` and sets the token's `aud` to the resource. A dynamically registered client's `resource` must be one of the `resourceIndicators` you seed (`[{ uri, default? }]`); with none seeded it is ignored and `aud` is the client ID.
+
 ## Apple Sign In
 
 Sign in with Apple emulation with authorization code flow, PKCE support, RS256 ID tokens, and OIDC discovery.
