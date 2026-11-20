@@ -1027,8 +1027,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@workos/emulate':
-        specifier: 0.14.0
-        version: 0.14.0
+        specifier: 0.20.0
+        version: 0.20.0
     devDependencies:
       '@workos-inc/node':
         specifier: ^11.0.0
@@ -6828,8 +6828,8 @@ packages:
     resolution: {integrity: sha512-swUT6CbkuVQXMOtUpI70LZ8usjSg8OXcKMjKdoYLeqCApRI0Oo97l+nZ0lKzZ5GxjxgcVZGGVK025h7z9WyCJg==}
     engines: {node: '>=22.11.0'}
 
-  '@workos/emulate@0.14.0':
-    resolution: {integrity: sha512-Yh/S/6eqEq3Ul8QivVpi15Jh/rZy+fWt7kCf6w7TEnqhAc+Y7KSpB8dnaTMeQUxZLXDXogyL3C8XM21ghSrICA==}
+  '@workos/emulate@0.20.0':
+    resolution: {integrity: sha512-7EuRkKnDyA/bTCG17AmeNw6VRurjNN10Gq7iB1ItBRQ/hs3zw+LLZSjbPLs8Qxn8E4Gb16IMPpSNJV916qxDfg==}
     engines: {node: '>=22.11'}
     hasBin: true
 
@@ -6862,6 +6862,15 @@ packages:
     resolution: {integrity: sha512-drLnLlLtqLni1UPZJ1pKl6PPsdGJoaFGaQsJa1khtjJT+OK5Z71rb+md9fO6KP9eJXjIOJKtW7OgnVlLf91WIw==}
     cpu: [x64]
     os: [win32]
+
+  '@zxcvbn-ts/core@2.2.1':
+    resolution: {integrity: sha512-Cg1JyRpCDIF+Dh3nauqygmmCYxogNVZDxSn+9PgkPD1HZ2QiJe4elruVJrGmYRS7muGmZ1hNJq8ySQdPv6GHaw==}
+
+  '@zxcvbn-ts/language-common@2.0.1':
+    resolution: {integrity: sha512-P+v5MA/UNc9nb3FEOEoDgTyIGQc2vLc6m04pdf5YyuNOzrL0iNANhECk2TUp62JbrjouJVodqhMH0j1a8/24Bg==}
+
+  '@zxcvbn-ts/language-en@2.1.0':
+    resolution: {integrity: sha512-I3n4AAbArjPAZtwCrk9MQnSrcj5+9rq8sic2rUU44fP5QaR17Vk8zDt61+R9dnP9ZRsj09aAUYML4Ash05qZjQ==}
 
   abbrev@3.0.1:
     resolution: {integrity: sha512-AO2ac6pjRB3SJmGJo+v5/aK6Omggp6fsLrs6wN9bd35ulu4cCwaAU9+7ZhXjeqHVkaHThLuzH0nZr0YpCDhygg==}
@@ -8331,6 +8340,10 @@ packages:
   fast-xml-parser@5.5.8:
     resolution: {integrity: sha512-Z7Fh2nVQSb2d+poDViM063ix2ZGt9jmY1nWhPfHBOK2Hgnb/OW3P4Et3P/81SEej0J7QbWtJqxO05h8QYfK7LQ==}
     hasBin: true
+
+  fastest-levenshtein@1.0.16:
+    resolution: {integrity: sha512-eRnCtTTtGZFpQCwhJiUOuxPQWRXVKYDn0b2PeHfXL6/Zi53SLAzAHfVhVWK2AryC/WH05kGfxhFIPvTF0SXQzg==}
+    engines: {node: '>= 4.9.1'}
 
   fastq@1.20.1:
     resolution: {integrity: sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==}
@@ -18454,9 +18467,12 @@ snapshots:
 
   '@workos-inc/node@11.0.0': {}
 
-  '@workos/emulate@0.14.0':
+  '@workos/emulate@0.20.0':
     dependencies:
       '@hono/node-server': 2.1.9(hono@4.13.19)
+      '@zxcvbn-ts/core': 2.2.1
+      '@zxcvbn-ts/language-common': 2.0.1
+      '@zxcvbn-ts/language-en': 2.1.0
       chalk: 5.6.2
       hono: 4.13.19
       semver: 7.8.5
@@ -18479,6 +18495,14 @@ snapshots:
 
   '@yuku-toolchain/win32-x64@0.25.0':
     optional: true
+
+  '@zxcvbn-ts/core@2.2.1':
+    dependencies:
+      fastest-levenshtein: 1.0.16
+
+  '@zxcvbn-ts/language-common@2.0.1': {}
+
+  '@zxcvbn-ts/language-en@2.1.0': {}
 
   abbrev@3.0.1: {}
 
@@ -20305,6 +20329,8 @@ snapshots:
       fast-xml-builder: 1.1.4
       path-expression-matcher: 1.2.0
       strnum: 2.2.1
+
+  fastest-levenshtein@1.0.16: {}
 
   fastq@1.20.1:
     dependencies:

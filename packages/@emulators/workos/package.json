@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@emulators/core": "workspace:*",
-    "@workos/emulate": "0.14.0"
+    "@workos/emulate": "0.20.0"
   },
   "devDependencies": {
     "@workos-inc/node": "^11.0.0",

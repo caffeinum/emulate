@@ -78,6 +78,15 @@ export const workosPlugin: ServicePlugin = {
         const responseHeaders = new Headers(upstream.headers);
         responseHeaders.delete("content-encoding");
         responseHeaders.delete("content-length");
+        // @workos/emulate redirects to its own base URL (/oauth2/authorize to the sign-in page).
+        const location = responseHeaders.get("location");
+        if (location?.startsWith(`${url}/`))
+          responseHeaders.set("location", incoming.origin + location.slice(url.length));
+        // Discovery documents build endpoint URLs from the origin they were reached on, which here is the private port.
+        if (responseHeaders.get("content-type")?.includes("application/json")) {
+          const text = (await upstream.text()).replaceAll(url, incoming.origin);
+          return new Response(text, { status: upstream.status, headers: responseHeaders });
+        }
         return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
       });
     }

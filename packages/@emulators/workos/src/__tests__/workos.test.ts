@@ -1,18 +1,19 @@
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { afterEach, beforeEach, expect, it } from "vitest";
+import { createHash, randomBytes } from "node:crypto";
 import { createServer, serve } from "@emulators/core";
-import { seedFromConfig, workosPlugin } from "../index.js";
+import { seedFromConfig, workosPlugin, type WorkOSSeedConfig } from "../index.js";
 
 const CLIENT_ID = "client_test";
 const REDIRECT = "http://localhost:3000/callback";
 let url: string;
 let close: () => Promise<void>;
-let reseed: () => void;
+let reseed: (extra?: WorkOSSeedConfig) => void;
 
 beforeEach(async () => {
   const server = createServer(workosPlugin, { port: 0, baseUrl: "https://workos.emulate.localhost" });
-  reseed = () => {
+  reseed = (extra = {}) => {
     server.store.reset();
     workosPlugin.seed?.(server.store, "");
     seedFromConfig(server.store, "", {
@@ -20,6 +21,7 @@ beforeEach(async () => {
         { id: "user_first", email: "First@Example.com", first_name: "First", email_verified: true },
         { id: "user_second", email: "second@example.com", first_name: "Second", email_verified: true },
       ],
+      ...extra,
     });
   };
   reseed();
@@ -111,4 +113,70 @@ it("starts a fresh instance on reset", async () => {
   const stale = await authenticate({ grant_type: "refresh_token", refresh_token: before.refresh_token });
   expect(stale.access_token).toBeUndefined();
   expect((await authorize()).searchParams.get("code")).toEqual(expect.any(String));
+});
+
+it("runs the MCP OAuth flow headless: discovery, dynamic registration, PKCE and resource-bound tokens", async () => {
+  const MCP = "http://localhost:3000/mcp";
+  reseed({ resourceIndicators: [{ uri: MCP }, { uri: "http://localhost:3000/evals/api/mcp", default: true }] });
+
+  const metadata = (await (await fetch(`${url}/.well-known/oauth-authorization-server`)).json()) as Record<string, any>;
+  expect(metadata).toMatchObject({
+    issuer: "https://workos.emulate.localhost",
+    authorization_endpoint: `${url}/oauth2/authorize`,
+    token_endpoint: `${url}/oauth2/token`,
+    registration_endpoint: `${url}/oauth2/register`,
+    jwks_uri: `${url}/oauth2/jwks`,
+    code_challenge_methods_supported: ["S256"],
+  });
+
+  const registered = await fetch(metadata.registration_endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ client_name: "mcp test", redirect_uris: [REDIRECT], token_endpoint_auth_method: "none" }),
+  });
+  expect(registered.status).toBe(201);
+  const client = (await registered.json()) as { client_id: string; client_secret?: string };
+  expect(client.client_secret).toBeUndefined();
+
+  const verifier = randomBytes(32).toString("base64url");
+  const authorizeQuery = new URLSearchParams({
+    client_id: client.client_id,
+    redirect_uri: REDIRECT,
+    response_type: "code",
+    state: "mcp",
+    code_challenge: createHash("sha256").update(verifier).digest("base64url"),
+    code_challenge_method: "S256",
+    resource: MCP,
+    login_hint: "second@example.com",
+  });
+  let location = `${metadata.authorization_endpoint}?${authorizeQuery}`;
+  for (let hop = 0; hop < 5 && !location.startsWith(REDIRECT); hop++) {
+    const response = await fetch(location, { redirect: "manual" });
+    expect(response.status).toBe(302);
+    location = new URL(response.headers.get("location")!, location).toString();
+    if (!location.startsWith(REDIRECT)) expect(location.startsWith(url)).toBe(true);
+  }
+  const callback = new URL(location);
+  expect(callback.searchParams.get("state")).toBe("mcp");
+  const code = callback.searchParams.get("code")!;
+
+  const exchange = (body: Record<string, string>) =>
+    fetch(metadata.token_endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: client.client_id,
+        redirect_uri: REDIRECT,
+        code,
+        ...body,
+      }),
+    });
+  expect((await exchange({ code_verifier: "wrong".repeat(10) })).status).toBe(400);
+
+  const tokenResponse = await exchange({ code_verifier: verifier, resource: MCP });
+  expect(tokenResponse.status).toBe(200);
+  const token = (await tokenResponse.json()) as { access_token: string };
+  const payload = JSON.parse(Buffer.from(token.access_token.split(".")[1]!, "base64url").toString());
+  expect(payload).toMatchObject({ aud: MCP, iss: "https://workos.emulate.localhost", sub: "user_second" });
 });
